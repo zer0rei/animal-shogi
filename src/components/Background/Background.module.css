@@ -1,0 +1,32 @@
+.world {
+  background-color: #fffad8;
+  height: 100vh;
+  width: 100vw;
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.sky {
+  position: absolute;
+  width: 100%;
+  left: 0;
+  top: 0;
+}
+
+.land {
+  position: absolute;
+  width: 100%;
+  left: 0;
+  bottom: 0;
+}
+
+@media screen and (max-width: 600px) {
+  .sky,
+  .land {
+    width: 150%;
+    left: -25%;
+  }
+}
