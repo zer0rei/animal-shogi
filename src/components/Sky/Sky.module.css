@@ -1,0 +1,46 @@
+@value colors: "../../tokens/colors.css";
+@value sky, cloud as cloud-color from colors;
+
+.container {
+  overflow: hidden;
+}
+
+.base {
+  width: 100%;
+  height: 100%;
+}
+
+.path {
+  stroke: none;
+  fill: sky;
+}
+
+.cloud {
+  fill: cloud-color;
+  max-height: 60%;
+  max-width: 25%;
+  position: absolute;
+  opacity: 0.7;
+}
+
+.cloudLeft {
+  composes: cloud;
+  top: 8%;
+  left: 7%;
+}
+
+.cloudMiddle {
+  composes: cloud;
+  max-height: 65%;
+  top: 20%;
+  left: 0;
+  right: 0;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cloudRight {
+  composes: cloud;
+  top: 8%;
+  right: 7%;
+}
