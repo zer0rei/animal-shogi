@@ -1,0 +1,25 @@
+@value colors: "../../tokens/colors.css";
+@value land, simple-flower from colors;
+
+.container {
+  overflow: hidden;
+}
+
+.base {
+  width: 100%;
+  height: 100%;
+}
+
+.path {
+  stroke: none;
+  fill: land;
+}
+
+.flower {
+  fill: simple-flower;
+  width: 30px;
+  position: absolute;
+  opacity: 0.8;
+  left: 0;
+  bottom: 0;
+}
