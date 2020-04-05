@@ -1,0 +1,71 @@
+@value colors: "../../tokens/colors.css";
+@value board-border from colors;
+
+.boardBorder {
+  border-width: 3px;
+  border-color: board-border;
+}
+
+.board {
+  composes: boardBorder;
+  display: flex;
+  visibility: hidden;
+  flex-direction: column;
+  position: absolute;
+  border-style: dashed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  margin: auto;
+  max-width: 85%;
+  max-height: 80%;
+  box-sizing: border-box;
+}
+
+.boardRow {
+  composes: boardBorder;
+  position: relative;
+  display: flex;
+  flex: 1;
+  border-bottom-style: dashed;
+  box-sizing: border-box;
+}
+
+.boardRow:last-child {
+  border-bottom-style: none;
+}
+
+.boardSquare {
+  composes: boardBorder;
+  position: relative;
+  flex: 1;
+  display: inline-block;
+  height: 100%;
+  border-right-style: dashed;
+  box-sizing: border-box;
+}
+
+.boardSquare:last-child {
+  border-right-style: none;
+}
+
+.label {
+  color: board-border;
+  display: inline-block;
+  position: absolute;
+}
+
+.rowLabel {
+  composes: label;
+  left: -20px;
+  top: 50%;
+  transform: translate(0, -50%);
+}
+
+.columnLabel {
+  composes: label;
+  top: -26px;
+  left: 50%;
+  transform: translate(-50%);
+}
