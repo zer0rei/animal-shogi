@@ -54,10 +54,10 @@ function Board({ squares, numRows, numCols, numRowsInSky }) {
     : boardDimensions.height;
   const skyHeight =
     (windowDimensions.height - currentBoardHeight) / 2 +
-    (currentBoardHeight * numRowsInSky) / numRows;
+    ((currentBoardHeight * numRowsInSky) / numRows) * 1.1;
   return (
     <>
-      <Background skyHeight={skyHeight * 1.05} landHeight={skyHeight * 1.2} />
+      <Background skyHeight={skyHeight} landHeight={skyHeight} />
       <div
         className={styles.board}
         ref={boardEl}

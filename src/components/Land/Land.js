@@ -5,7 +5,7 @@ import { randomize, times } from "../../helpers";
 import styles from "./Land.module.css";
 
 function Land({ className, style }) {
-  const randomize10 = (num) => randomize(num, 10);
+  const randomize5 = (num) => randomize(num, 5);
   return (
     <div className={`${styles.container} ${className}`} style={style}>
       <svg
@@ -14,12 +14,12 @@ function Land({ className, style }) {
         className={styles.base}
       >
         <path
-          d={`M0,20 Q70,${randomize10(0)} 130,${randomize10(
+          d={`M0,20 Q70,${randomize5(0)} 130,${randomize5(
             50
-          )} Q190,${randomize10(-10)} 250,${randomize10(50)} Q310,${randomize10(
-            0
-          )} 370,${randomize10(50)} Q430,${randomize10(
-            -10
+          )} Q190,${randomize5(-40)} 250,${randomize5(50)} Q310,${randomize5(
+            -40
+          )} 370,${randomize5(50)} Q430,${randomize5(
+            -20
           )} 500,20 L500,500 L0,500 Z`}
           className={styles.path}
         />

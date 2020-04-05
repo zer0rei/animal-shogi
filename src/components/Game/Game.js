@@ -18,7 +18,7 @@ const miniInitialSetup = {
   isSymmetric: true,
 };
 
-const animals = {
+const getAnimals = (type) => ({
   lion: {
     image: lion,
     color: "#f8b9bb",
@@ -32,7 +32,7 @@ const animals = {
     moves: ["stl", "str", "sbl", "sbr"],
   },
   giraffe: { image: giraffe, color: "#cdaed0", moves: ["s*m", "sm*"] },
-};
+});
 
 const getSettings = (type) => {
   switch (type) {
@@ -85,6 +85,7 @@ function Game({ config }) {
   const [squares, setSquares] = useState(getInitialSquares(type));
   const { numRows, numCols } = getSettings(type);
   const numRowsInSky = Math.floor(numRows / 3);
+  const animals = getAnimals(type);
   // expand moves
   const returnedAnimals = {};
   Object.keys(animals).forEach((animal) => {
