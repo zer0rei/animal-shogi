@@ -1,20 +1,30 @@
-import React, { useRef, useContext } from "react";
+import React, { useState, useCallback, useContext } from "react";
 import PropTypes from "prop-types";
-import { AnimalContext } from "../../contexts";
+import { AnimalsContext, BoardDimensionsContext } from "../../contexts";
+import { cls } from "../../helpers";
 import styles from "./Piece.module.css";
 
 function Piece({ className, type, isSky }) {
-  const pieceEl = useRef(null);
-  const animals = useContext(AnimalContext);
+  const boardDimensions = useContext(BoardDimensionsContext);
+  const animals = useContext(AnimalsContext);
+  const [pieceWidth, setPieceWidth] = useState(0);
   const { color, image, moves } = animals[type];
-  const moveIndicatorSize = pieceEl.current
-    ? Math.ceil(pieceEl.current.offsetHeight * 0.05)
-    : 0;
+
+  const measuredPieceRef = useCallback(
+    (node) => {
+      if (node !== null) {
+        setPieceWidth(node.getBoundingClientRect().width);
+      }
+    },
+    [boardDimensions.width, boardDimensions.height]
+  );
+
+  const moveIndicatorSize = Math.ceil(pieceWidth * 0.05);
 
   return (
     <div
-      className={`${styles.base} ${className}`}
-      ref={pieceEl}
+      className={cls(styles.base, className)}
+      ref={measuredPieceRef}
       style={{
         backgroundColor: color || "white",
         transform: isSky && "rotate(180deg)",
@@ -25,11 +35,13 @@ function Piece({ className, type, isSky }) {
         const moveType = move[0] === "s" ? "dot" : "triangle";
         const corner = move.substr(1);
         return (
-          <span
-            key={move}
-            className={styles[`${moveType}-${corner}`]}
-            style={{ width: moveIndicatorSize, height: moveIndicatorSize }}
-          />
+          moveIndicatorSize && (
+            <span
+              key={move}
+              className={styles[`${moveType}-${corner}`]}
+              style={{ width: moveIndicatorSize, height: moveIndicatorSize }}
+            />
+          )
         );
       })}
     </div>
