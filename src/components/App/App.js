@@ -1,12 +1,40 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { WindowDimensionsContext } from "../../contexts";
 import Game from "../Game";
 
+function getWindowDimensions() {
+  const { innerWidth: width, innerHeight: height } = window;
+  return {
+    width,
+    height,
+  };
+}
+
 const config = {
-  type: "mini",
+  gameType: "mini",
 };
 
 function App() {
-  return <Game config={config} />;
+  const [windowDimensions, setWindowDimensions] = useState(
+    getWindowDimensions()
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowDimensions(getWindowDimensions());
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  return (
+    <WindowDimensionsContext.Provider value={windowDimensions}>
+      <Game config={config} />
+    </WindowDimensionsContext.Provider>
+  );
 }
 
 export default App;
