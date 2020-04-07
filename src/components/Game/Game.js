@@ -1,91 +1,76 @@
-import React, { useState } from "react";
+import React, { useReducer } from "react";
 import PropTypes from "prop-types";
+import { DndProvider } from "react-dnd";
+import Backend from "react-dnd-multi-backend";
+import HTML5toTouch from "react-dnd-multi-backend/dist/esm/HTML5toTouch";
 import Board from "../Board";
-import { AnimalContext } from "../../contexts";
-import lion from "../../assets/lion.svg";
-import chick from "../../assets/chick.svg";
-import hen from "../../assets/hen.svg";
-import elephant from "../../assets/elephant.svg";
-import giraffe from "../../assets/giraffe.svg";
-import { times, toAlpha, expandMoves } from "../../helpers";
-import styles from "./Game.module.css";
+import {
+  PiecesStateContext,
+  PiecesDispatchContext,
+  AnimalsContext,
+} from "../../contexts";
+import { expandMoves } from "../../helpers";
+import getSettings from "./getSettings";
+import getAnimals from "./getAnimals";
+import getInitialPieces from "./getInitialPieces";
 
-const miniInitialSetup = {
-  A1: "giraffe",
-  B1: "lion",
-  C1: "elephant",
-  B2: "chick",
-  isSymmetric: true,
-};
+const canMove = () => () => true;
 
-const getAnimals = (type) => ({
-  lion: {
-    image: lion,
-    color: "#f8b9bb",
-    moves: ["s**"],
-  },
-  chick: { image: chick, color: "#ebf2d4", moves: ["stm"] },
-  hen: { image: hen, color: "#ebf2d4", moves: ["st*", "sm*", "sbm"] },
-  elephant: {
-    image: elephant,
-    color: "#cdaed0",
-    moves: ["stl", "str", "sbl", "sbr"],
-  },
-  giraffe: { image: giraffe, color: "#cdaed0", moves: ["s*m", "sm*"] },
-});
-
-const getSettings = (type) => {
-  switch (type) {
-    case "mini":
-      return { numRows: 4, numCols: 3, initialSetup: miniInitialSetup };
-    default:
-      return { numRows: 9, numCols: 9 };
-  }
-};
-
-const getInitialSquares = (type) => {
-  const { numRows, numCols, initialSetup } = getSettings(type);
-  let squares = [];
-  times(numRows, (i) => {
-    squares[i] = [];
-    times(numCols, (j) => {
-      const type = initialSetup[toAlpha(j + 1) + (i + 1)];
-      if (type) {
-        squares[i][j] = {
-          type,
-          isSky: i < numCols / 2,
-          isEmpty: false,
-        };
-      } else {
-        squares[i][j] = {
-          isEmpty: true,
-        };
+const piecesReducer = (state, action) => {
+  switch (action.type) {
+    case "move": {
+      const { from, to } = action.payload;
+      if (canMove(state)(from, to)) {
+        const newCaptured = state.captured.slice();
+        const newBoard = state.board.map((row, i) => {
+          // irrelevent row: return as is
+          if (i !== from.x && i !== to.x) {
+            return row;
+          }
+          return row.map((piece, j) => {
+            if (i === from.x && j === from.y) {
+              return {
+                isEmpty: true,
+              };
+            }
+            if (i === to.x && j === to.y) {
+              if (!piece.isEmpty) {
+                newCaptured.push({
+                  type: piece.type,
+                  isSky: !piece.isSky,
+                });
+              }
+              const fromSquare = state.board[from.x][from.y];
+              return {
+                ...fromSquare,
+                isEmpty: false,
+              };
+            }
+            return piece;
+          });
+        });
+        return { ...state, board: newBoard, captured: newCaptured };
       }
-    });
-  });
-  if (initialSetup.isSymmetric) {
-    times(numRows, (i) => {
-      times(numCols, (j) => {
-        const invI = numRows - i - 1;
-        const invJ = numCols - j - 1;
-        if (squares[i][j].isEmpty && !squares[invI][invJ].isEmpty) {
-          squares[i][j] = {
-            ...squares[invI][invJ],
-            isSky: !squares[invI][invJ].isSky,
-          };
-        }
-      });
-    });
+      return state;
+    }
+    case "drop":
+      return {};
+    case "promote":
+      return {};
+    default:
+      return state;
   }
-  return squares;
 };
 
 function Game({ config }) {
-  const { type } = config;
-  const [squares, setSquares] = useState(getInitialSquares(type));
-  const { numRows, numCols } = getSettings(type);
+  const { gameType } = config;
+  const [pieces, dispatch] = useReducer(
+    piecesReducer,
+    getInitialPieces(gameType)
+  );
+  const { numRows, numCols } = getSettings(gameType);
   const numRowsInSky = Math.floor(numRows / 3);
-  const animals = getAnimals(type);
+  const animals = getAnimals(gameType);
   // expand moves
   const returnedAnimals = {};
   Object.keys(animals).forEach((animal) => {
@@ -94,15 +79,22 @@ function Game({ config }) {
       moves: expandMoves(animals[animal].moves),
     };
   });
+  const move = (from, to) => dispatch({ type: "move", payload: { from, to } });
+
   return (
-    <AnimalContext.Provider value={returnedAnimals}>
-      <Board
-        squares={squares}
-        numCols={numCols}
-        numRows={numRows}
-        numRowsInSky={numRowsInSky}
-      />
-    </AnimalContext.Provider>
+    <DndProvider backend={Backend} options={HTML5toTouch}>
+      <AnimalsContext.Provider value={returnedAnimals}>
+        <PiecesStateContext.Provider value={pieces}>
+          <PiecesDispatchContext.Provider value={{ canMove, move }}>
+            <Board
+              numCols={numCols}
+              numRows={numRows}
+              numRowsInSky={numRowsInSky}
+            />
+          </PiecesDispatchContext.Provider>
+        </PiecesStateContext.Provider>
+      </AnimalsContext.Provider>
+    </DndProvider>
   );
 }
 
