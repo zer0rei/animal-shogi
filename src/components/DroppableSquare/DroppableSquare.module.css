@@ -1,0 +1,10 @@
+@value colors: "../../tokens/colors.css";
+@value board-hover, board-droppable from colors;
+
+.over {
+  background-color: board-hover;
+}
+
+.droppable {
+  background-color: board-droppable;
+}
