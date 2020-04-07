@@ -1,67 +1,83 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useCallback, useContext } from "react";
 import PropTypes from "prop-types";
+import {
+  WindowDimensionsContext,
+  PiecesStateContext,
+  BoardDimensionsContext,
+} from "../../contexts";
 import Background from "../Background";
-import Piece from "../Piece";
+import DroppableSquare from "../DroppableSquare";
+import DraggablePiece from "../DraggablePiece";
 import { times, toAlpha } from "../../helpers";
 import styles from "./Board.module.css";
 
-function getWindowDimensions() {
-  const { innerWidth: width, innerHeight: height } = window;
-  return {
-    width,
-    height,
-  };
-}
+const maxBoardHeightPercent = 0.8;
+const maxBoardWidthPercent = 0.85;
 
-function Board({ squares, numRows, numCols, numRowsInSky }) {
-  const [windowDimensions, setWindowDimensions] = useState(
-    getWindowDimensions()
-  );
+function Board({ numRows, numCols, numRowsInSky }) {
+  const pieces = useContext(PiecesStateContext);
+  const squares = pieces.board;
+  const windowDimensions = useContext(WindowDimensionsContext);
   const [boardDimensions, setBoardDimensions] = useState({
-    height: "auto",
     width: "auto",
+    height: "auto",
   });
-  const boardEl = useRef(null);
+  const [pieceContainerDimensions, setPieceContainerDimensions] = useState({
+    width: 0,
+    height: 0,
+  });
 
-  useEffect(() => {
-    const handleResize = () => {
-      const currentWindowDimensions = getWindowDimensions();
-      const aspectRatio =
-        currentWindowDimensions.width / currentWindowDimensions.height;
-      setWindowDimensions(currentWindowDimensions);
-      let boardHeight = "auto";
-      let boardWidth = "auto";
-      if (aspectRatio >= numCols / numRows) {
-        boardWidth = boardEl.current.offsetHeight * (numCols / numRows);
-      } else {
-        boardHeight = boardEl.current.offsetWidth * (numRows / numCols);
+  const measuredBoardRef = useCallback(
+    (node) => {
+      if (node !== null) {
+        let boardHeight = "auto";
+        let boardWidth = "auto";
+        const aspectRatio = windowDimensions.width / windowDimensions.height;
+        const autoBoardHeight = maxBoardHeightPercent * windowDimensions.height;
+        const autoBoardWidth = maxBoardWidthPercent * windowDimensions.width;
+        if (aspectRatio >= numCols / numRows) {
+          boardWidth = autoBoardHeight * (numCols / numRows);
+        } else {
+          boardHeight = autoBoardWidth * (numRows / numCols);
+        }
+        setBoardDimensions({
+          height: boardHeight,
+          width: boardWidth,
+        });
+        // show board after calculating dimensions
+        node.style.visibility = "visible";
       }
-      setBoardDimensions({
-        height: boardHeight,
-        width: boardWidth,
-      });
-    };
-    handleResize();
-    // show board after calculating dimensions
-    boardEl.current.style.visibility = "visible";
+    },
+    [windowDimensions.height, windowDimensions.width, numCols, numRows]
+  );
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  const measuredPieceContainerRef = useCallback(
+    (node) => {
+      if (node !== null) {
+        const { width, height } = node.getBoundingClientRect();
+        setPieceContainerDimensions({ width, height });
+      }
+    },
+    [boardDimensions.height, boardDimensions.width]
+  );
 
   const currentBoardHeight = isNaN(boardDimensions.height)
-    ? 0.8 * windowDimensions.height
+    ? maxBoardHeightPercent * windowDimensions.height
     : boardDimensions.height;
   const skyHeight =
     (windowDimensions.height - currentBoardHeight) / 2 +
     ((currentBoardHeight * numRowsInSky) / numRows) * 1.1;
   return (
-    <>
+    <BoardDimensionsContext.Provider value={boardDimensions}>
       <Background skyHeight={skyHeight} landHeight={skyHeight} />
       <div
         className={styles.board}
-        ref={boardEl}
-        style={{ ...boardDimensions }}
+        ref={measuredBoardRef}
+        style={{
+          ...boardDimensions,
+          maxHeight: `${maxBoardHeightPercent * 100}%`,
+          maxWidth: `${maxBoardWidthPercent * 100}%`,
+        }}
       >
         {times(numRows, (i) => (
           <div key={i} className={styles.boardRow} style={{}}>
@@ -69,23 +85,39 @@ function Board({ squares, numRows, numCols, numRowsInSky }) {
             {times(numCols, (j) => {
               const { isEmpty, type, isSky } = squares[i][j];
               return (
-                <div key={j} className={styles.boardSquare}>
+                <DroppableSquare
+                  key={j}
+                  className={styles.boardSquare}
+                  position={{ x: i, y: j }}
+                >
                   {i === 0 && (
                     <div className={styles.columnLabel}>{toAlpha(j + 1)}</div>
                   )}
-                  {isEmpty || <Piece type={type} isSky={isSky} />}
-                </div>
+                  {isEmpty || (
+                    <div
+                      className={styles.pieceContainer}
+                      ref={measuredPieceContainerRef}
+                    >
+                      <DraggablePiece
+                        type={type}
+                        isSky={isSky}
+                        position={{ x: i, y: j }}
+                        height={pieceContainerDimensions.height}
+                        width={pieceContainerDimensions.width}
+                      />
+                    </div>
+                  )}
+                </DroppableSquare>
               );
             })}
           </div>
         ))}
       </div>
-    </>
+    </BoardDimensionsContext.Provider>
   );
 }
 
 Board.propTypes = {
-  squares: PropTypes.array,
   numCols: PropTypes.number,
   numRows: PropTypes.number,
   numRowsInSky: PropTypes.number,
