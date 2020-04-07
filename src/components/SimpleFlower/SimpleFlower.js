@@ -1,6 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { randomize } from "../../helpers";
+import { randomize, cls } from "../../helpers";
 import styles from "./SimpleFlower.module.css";
 
 function SimpleFlower({ className, style }) {
@@ -8,7 +8,7 @@ function SimpleFlower({ className, style }) {
   return (
     <svg
       viewBox="0 0 50 50"
-      className={`${styles.flower} ${className}`}
+      className={cls(styles.flower, className)}
       transform={`rotate(${randomize(180, 180)})`}
       style={style}
     >

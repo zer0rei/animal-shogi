@@ -1,13 +1,13 @@
 import React from "react";
 import PropTypes from "prop-types";
 import Cloud from "../Cloud";
-import { randomize } from "../../helpers";
+import { randomize, cls } from "../../helpers";
 import styles from "./Sky.module.css";
 
 function Sky({ className, style }) {
   const randomize5 = (num) => randomize(num, 5);
   return (
-    <div className={`${styles.container} ${className}`} style={style}>
+    <div className={cls(styles.container, className)} style={style}>
       <svg
         viewBox="0 0 500 150"
         preserveAspectRatio="none"

@@ -1,13 +1,13 @@
 import React from "react";
 import PropTypes from "prop-types";
 import SimpleFlower from "../SimpleFlower";
-import { randomize, times } from "../../helpers";
+import { randomize, times, cls } from "../../helpers";
 import styles from "./Land.module.css";
 
 function Land({ className, style }) {
   const randomize5 = (num) => randomize(num, 5);
   return (
-    <div className={`${styles.container} ${className}`} style={style}>
+    <div className={cls(styles.container, className)} style={style}>
       <svg
         viewBox="0 0 500 150"
         preserveAspectRatio="none"

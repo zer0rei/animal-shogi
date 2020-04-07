@@ -32,3 +32,23 @@ export const expandMoves = (moves) => [
       .filter((move) => move.substr(1, 3) !== "mm")
   ),
 ];
+
+export function cls() {
+  let cls = "";
+  for (let c of arguments) {
+    if (typeof c === "object") {
+      for (let k in c) {
+        if (c[k]) {
+          cls && (cls += " ");
+          cls += k;
+        }
+      }
+    } else {
+      if (c) {
+        cls && (cls += " ");
+        cls += c;
+      }
+    }
+  }
+  return cls;
+}
