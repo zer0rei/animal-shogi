@@ -2,9 +2,9 @@ import React from "react";
 
 export const WindowDimensionsContext = React.createContext();
 
-export const PiecesStateContext = React.createContext();
+export const GameStateContext = React.createContext();
 
-export const PiecesDispatchContext = React.createContext();
+export const GameDispatchContext = React.createContext();
 
 export const BoardDimensionsContext = React.createContext();
 

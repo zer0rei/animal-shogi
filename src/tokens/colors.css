@@ -4,5 +4,5 @@
 @value simple-flower: #fff;
 @value board-border: #ee607b;
 /* same as board-border but transparent */
-@value board-droppable: rgba(238,96,123,0.15);
+@value board-droppable: rgba(238,96,123,0.2);
 @value board-hover: rgba(238,96,123,0.5);

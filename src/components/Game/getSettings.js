@@ -8,12 +8,12 @@ const miniInitialSetup = {
 
 const gameTypes = {
   mini: { numRows: 4, numCols: 3, initialSetup: miniInitialSetup },
-  standard: { numRows: 9, numCols: 9 },
+  standard: { numRows: 9, numCols: 9, initialSetup: miniInitialSetup },
 };
 
 const getSettings = (gameType) => {
   switch (gameType) {
-    case "mini":
+    case "micro":
       return gameTypes.mini;
     case "standard":
       return gameTypes.standard;

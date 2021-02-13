@@ -1,0 +1,23 @@
+.iconButtonsContainer {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  display: flex;
+  flex-direction: row-reverse;
+}
+
+.helpButton {
+  margin-top: 0;
+  margin-right: 8px;
+}
+
+@media screen and (max-aspect-ratio: 1/1) {
+  .iconButtonsContainer {
+    flex-direction: column;
+  }
+
+  .helpButton {
+    margin-top: 8px;
+    margin-right: 0;
+  }
+}

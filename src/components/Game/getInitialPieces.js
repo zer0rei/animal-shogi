@@ -37,7 +37,10 @@ const getInitialPieces = (gameType) => {
   }
   return {
     board: boardPieces,
-    captured: [],
+    captured: {
+      land: [],
+      sky: [],
+    },
   };
 };
 

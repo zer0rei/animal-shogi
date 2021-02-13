@@ -4,7 +4,7 @@ import { useDrag } from "react-dnd";
 import { Preview } from "react-dnd-multi-backend";
 import Piece from "../Piece";
 import { itemTypes } from "../../constants";
-import styles from "./DraggablePiece.module.css";
+import styles from "./BoardPiece.module.css";
 
 const PiecePreview = () => {
   const { itemType, item, style } = useContext(Preview.Context);
@@ -17,16 +17,17 @@ const PiecePreview = () => {
   );
 };
 
-function DraggablePiece({ height, width, ...rest }) {
+function BoardPiece({ height, width, position, isSkyTurn, result, ...rest }) {
   const [{ isDragging }, drag] = useDrag({
     item: {
       type: itemTypes.PIECE,
       piece: rest.type,
       isSky: rest.isSky,
-      from: rest.position,
+      from: position,
       height,
       width,
     },
+    canDrag: () => !result.didEnd && isSkyTurn === rest.isSky,
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
@@ -48,10 +49,13 @@ function DraggablePiece({ height, width, ...rest }) {
   );
 }
 
-DraggablePiece.propTypes = {
+BoardPiece.propTypes = {
   height: PropTypes.number,
   width: PropTypes.number,
+  position: PropTypes.oneOfType([PropTypes.number, PropTypes.object]),
+  isSkyTurn: PropTypes.bool,
+  result: PropTypes.object,
   rest: PropTypes.object,
 };
 
-export default DraggablePiece;
+export default BoardPiece;

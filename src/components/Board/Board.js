@@ -2,20 +2,20 @@ import React, { useState, useCallback, useContext } from "react";
 import PropTypes from "prop-types";
 import {
   WindowDimensionsContext,
-  PiecesStateContext,
+  GameStateContext,
   BoardDimensionsContext,
 } from "../../contexts";
 import Background from "../Background";
-import DroppableSquare from "../DroppableSquare";
-import DraggablePiece from "../DraggablePiece";
+import BoardSquare from "../BoardSquare";
+import BoardPiece from "../BoardPiece";
 import { times, toAlpha } from "../../helpers";
 import styles from "./Board.module.css";
 
 const maxBoardHeightPercent = 0.8;
-const maxBoardWidthPercent = 0.85;
+const maxBoardWidthPercent = 0.8;
 
 function Board({ numRows, numCols, numRowsInSky }) {
-  const pieces = useContext(PiecesStateContext);
+  const { pieces, isSkyTurn, result } = useContext(GameStateContext);
   const squares = pieces.board;
   const windowDimensions = useContext(WindowDimensionsContext);
   const [boardDimensions, setBoardDimensions] = useState({
@@ -27,15 +27,23 @@ function Board({ numRows, numCols, numRowsInSky }) {
     height: 0,
   });
 
+  const getAspectRatio = (width, height) => {
+    const aspectRatio = width / height;
+    return (aspectRatio * numRows) / numCols;
+  };
+
   const measuredBoardRef = useCallback(
     (node) => {
       if (node !== null) {
         let boardHeight = "auto";
         let boardWidth = "auto";
-        const aspectRatio = windowDimensions.width / windowDimensions.height;
+        const aspectRatio = getAspectRatio(
+          windowDimensions.width,
+          windowDimensions.height
+        );
         const autoBoardHeight = maxBoardHeightPercent * windowDimensions.height;
         const autoBoardWidth = maxBoardWidthPercent * windowDimensions.width;
-        if (aspectRatio >= numCols / numRows) {
+        if (aspectRatio >= 1) {
           boardWidth = autoBoardHeight * (numCols / numRows);
         } else {
           boardHeight = autoBoardWidth * (numRows / numCols);
@@ -64,9 +72,37 @@ function Board({ numRows, numCols, numRowsInSky }) {
   const currentBoardHeight = isNaN(boardDimensions.height)
     ? maxBoardHeightPercent * windowDimensions.height
     : boardDimensions.height;
+
   const skyHeight =
     (windowDimensions.height - currentBoardHeight) / 2 +
     ((currentBoardHeight * numRowsInSky) / numRows) * 1.1;
+
+  const capturedContainerWidth =
+    (windowDimensions.width -
+      (isNaN(boardDimensions.width)
+        ? maxBoardWidthPercent * windowDimensions.width
+        : boardDimensions.width)) /
+    2;
+
+  const capturedContainerHeight =
+    (windowDimensions.height -
+      (isNaN(boardDimensions.height)
+        ? maxBoardHeightPercent * windowDimensions.height
+        : boardDimensions.height)) /
+    2;
+
+  const pieceProps = {
+    height: pieceContainerDimensions.height,
+    width: pieceContainerDimensions.width,
+    isSkyTurn: isSkyTurn,
+    result: result,
+  };
+
+  const aspectRatio = getAspectRatio(
+    windowDimensions.width,
+    windowDimensions.height
+  );
+
   return (
     <BoardDimensionsContext.Provider value={boardDimensions}>
       <Background skyHeight={skyHeight} landHeight={skyHeight} />
@@ -74,7 +110,8 @@ function Board({ numRows, numCols, numRowsInSky }) {
         className={styles.board}
         ref={measuredBoardRef}
         style={{
-          ...boardDimensions,
+          height: boardDimensions.height,
+          width: boardDimensions.width,
           maxHeight: `${maxBoardHeightPercent * 100}%`,
           maxWidth: `${maxBoardWidthPercent * 100}%`,
         }}
@@ -85,7 +122,7 @@ function Board({ numRows, numCols, numRowsInSky }) {
             {times(numCols, (j) => {
               const { isEmpty, type, isSky } = squares[i][j];
               return (
-                <DroppableSquare
+                <BoardSquare
                   key={j}
                   className={styles.boardSquare}
                   position={{ x: i, y: j }}
@@ -98,18 +135,83 @@ function Board({ numRows, numCols, numRowsInSky }) {
                       className={styles.pieceContainer}
                       ref={measuredPieceContainerRef}
                     >
-                      <DraggablePiece
+                      <BoardPiece
                         type={type}
                         isSky={isSky}
                         position={{ x: i, y: j }}
-                        height={pieceContainerDimensions.height}
-                        width={pieceContainerDimensions.width}
+                        {...pieceProps}
                       />
                     </div>
                   )}
-                </DroppableSquare>
+                </BoardSquare>
               );
             })}
+          </div>
+        ))}
+      </div>
+      <div
+        className={styles.skyCapturedContainer}
+        style={{
+          width:
+            aspectRatio >= 1
+              ? capturedContainerWidth
+              : windowDimensions.width - 60,
+          height:
+            aspectRatio >= 1
+              ? windowDimensions.height - 60
+              : capturedContainerHeight,
+          flexDirection: aspectRatio >= 1 ? "column" : "row",
+          padding: aspectRatio >= 1 ? "8px 20px 8px 8px" : "8px 8px 20px 8px",
+        }}
+      >
+        {pieces.captured.sky.map((capturedPiece, index) => (
+          <div
+            key={index}
+            className={styles.capturedPiece}
+            style={{
+              height: pieceContainerDimensions.height,
+              width: pieceContainerDimensions.width,
+            }}
+          >
+            <BoardPiece
+              type={capturedPiece.type}
+              isSky={capturedPiece.isSky}
+              position={index}
+              {...pieceProps}
+            />
+          </div>
+        ))}
+      </div>
+      <div
+        className={styles.landCapturedContainer}
+        style={{
+          width:
+            aspectRatio >= 1
+              ? capturedContainerWidth
+              : windowDimensions.width - 60,
+          height:
+            aspectRatio >= 1
+              ? windowDimensions.height - 60
+              : capturedContainerHeight,
+          flexDirection: aspectRatio >= 1 ? "column-reverse" : "row-reverse",
+          padding: aspectRatio >= 1 ? "8px 8px 8px 20px" : "20px 8px 8px 8px",
+        }}
+      >
+        {pieces.captured.land.map((capturedPiece, index) => (
+          <div
+            key={index}
+            className={styles.capturedPiece}
+            style={{
+              height: pieceContainerDimensions.height,
+              width: pieceContainerDimensions.width,
+            }}
+          >
+            <BoardPiece
+              type={capturedPiece.type}
+              isSky={capturedPiece.isSky}
+              position={index}
+              {...pieceProps}
+            />
           </div>
         ))}
       </div>

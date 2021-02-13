@@ -19,6 +19,7 @@
   bottom: 0;
   margin: auto;
   box-sizing: border-box;
+  user-select: none;
 }
 
 .boardRow {
@@ -72,4 +73,32 @@
   height: 80%;
   width: 80%;
   margin: 10%;
+}
+
+.capturedContainer {
+  position: absolute;
+  display: flex;
+  box-sizing: border-box;
+  align-content: flex-start;
+  justify-content: flex-start;
+}
+
+.skyCapturedContainer {
+  composes: capturedContainer;
+  left: 0;
+  top: 0;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.landCapturedContainer {
+  composes: capturedContainer;
+  right: 0;
+  bottom: 0;
+  flex-wrap: wrap-reverse;
+  align-items: flex-end;
+}
+
+.capturedPiece {
+  margin: 6px;
 }
