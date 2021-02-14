@@ -1,9 +1,12 @@
-import React, { useReducer } from "react";
+import React, { useReducer, useState } from "react";
 import PropTypes from "prop-types";
 import { DndProvider } from "react-dnd";
 import Backend from "react-dnd-multi-backend";
 import HTML5toTouch from "react-dnd-multi-backend/dist/esm/HTML5toTouch";
 import Board from "../Board";
+import IconButton from "../IconButton";
+import Result from "../Result";
+import resetIcon from "../../assets/reset-icon.svg";
 import {
   GameStateContext,
   GameDispatchContext,
@@ -12,6 +15,7 @@ import {
 import getSettings from "./getSettings";
 import getAnimals, { getPromoted, getDemoted, isPromoted } from "./getAnimals";
 import getInitialPieces from "./getInitialPieces";
+import styles from "./Game.module.css";
 
 const isOutOfBound = (board, position) => {
   return (
@@ -85,6 +89,12 @@ const canBeCaptured = (gameType, pieces) => (pos) => {
 
 const piecesReducer = (gameType) => (state, action) => {
   switch (action.type) {
+    case "reset": {
+      return {
+        initialState: state.initialState,
+        ...state.initialState,
+      };
+    }
     case "move": {
       const { numRows } = getSettings(gameType);
       const numRowsInSky = Math.floor(numRows / 3);
@@ -256,20 +266,25 @@ const piecesReducer = (gameType) => (state, action) => {
   }
 };
 
-function Game({ config }) {
+function Game({ config, onHelp }) {
   const { gameType } = config;
+  const initialState = {
+    result: {
+      didEnd: false,
+      didWin: false,
+      didSkyWin: false,
+    },
+    isSkyTurn: false,
+    pieces: getInitialPieces(gameType),
+  };
   const [{ pieces, isSkyTurn, result }, dispatch] = useReducer(
     piecesReducer(gameType),
     {
-      result: {
-        didEnd: false,
-        didWin: false,
-        didSkyWin: false,
-      },
-      isSkyTurn: false,
-      pieces: getInitialPieces(gameType),
+      initialState,
+      ...initialState,
     }
   );
+  const [resultClosed, setResultClosed] = useState(false);
   const { numRows, numCols } = getSettings(gameType);
   const numRowsInSky = Math.floor(numRows / 3);
   const animals = getAnimals(gameType);
@@ -279,6 +294,10 @@ function Game({ config }) {
   }
 
   // action creators
+  const reset = () => {
+    dispatch({ type: "reset" });
+    setResultClosed(false);
+  };
   const move = (from, to) => dispatch({ type: "move", payload: { from, to } });
   const drop = (isSky, from, to) =>
     dispatch({ type: "drop", payload: { isSky, fromIndex: from, to } });
@@ -300,6 +319,21 @@ function Game({ config }) {
               numRows={numRows}
               numRowsInSky={numRowsInSky}
             />
+            <div className={styles.iconButtonsContainer}>
+              <IconButton icon={resetIcon} alt="reset" onClick={reset} />
+              <IconButton
+                className={styles.helpButton}
+                text="?"
+                onClick={onHelp}
+              />
+            </div>
+            {!resultClosed && result.didEnd && (
+              <Result
+                didSkyWin={result.didSkyWin}
+                onReset={reset}
+                onClose={() => setResultClosed(true)}
+              />
+            )}
           </GameDispatchContext.Provider>
         </GameStateContext.Provider>
       </AnimalsContext.Provider>
@@ -309,6 +343,7 @@ function Game({ config }) {
 
 Game.propTypes = {
   config: PropTypes.object,
+  onHelp: PropTypes.func,
 };
 
 export default Game;
