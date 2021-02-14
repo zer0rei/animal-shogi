@@ -330,10 +330,11 @@ function Game({ config, onHelp }) {
               numRowsInSky={numRowsInSky}
             />
             <div className={styles.iconButtonsContainer}>
-              <IconButton icon={resetIcon} alt="reset" onClick={reset} />
+              <IconButton icon={resetIcon} ariaLabel="replay" onClick={reset} />
               <IconButton
                 className={styles.helpButton}
                 text="?"
+                ariaLabel="help"
                 onClick={onHelp}
               />
             </div>
