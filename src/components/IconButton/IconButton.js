@@ -9,7 +9,7 @@ function IconButton({ className, icon, text, onClick, ariaLabel }) {
       className={cls(styles.base, className)}
       onClick={onClick}
       style={{ backgroundImage: icon && `url(${icon})` }}
-      ariaLabel={ariaLabel}
+      aria-label={ariaLabel}
     >
       {!icon ? text : ""}
     </button>
