@@ -94,8 +94,8 @@ function Board({ numRows, numCols, numRowsInSky }) {
   const pieceProps = {
     height: pieceContainerDimensions.height,
     width: pieceContainerDimensions.width,
-    isSkyTurn: isSkyTurn,
-    result: result,
+    isSkyTurn,
+    result,
   };
 
   const aspectRatio = getAspectRatio(
@@ -176,6 +176,7 @@ function Board({ numRows, numCols, numRowsInSky }) {
             <BoardPiece
               type={capturedPiece.type}
               isSky={capturedPiece.isSky}
+              number={capturedPiece.number}
               position={index}
               {...pieceProps}
             />
@@ -209,6 +210,7 @@ function Board({ numRows, numCols, numRowsInSky }) {
             <BoardPiece
               type={capturedPiece.type}
               isSky={capturedPiece.isSky}
+              number={capturedPiece.number}
               position={index}
               {...pieceProps}
             />

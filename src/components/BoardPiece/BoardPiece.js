@@ -17,31 +17,50 @@ const PiecePreview = () => {
   );
 };
 
-function BoardPiece({ height, width, position, isSkyTurn, result, ...rest }) {
+function BoardPiece({
+  height,
+  width,
+  position,
+  isSkyTurn,
+  result,
+  number,
+  type,
+  isSky,
+  ...rest
+}) {
   const [{ isDragging }, drag] = useDrag({
     item: {
       type: itemTypes.PIECE,
-      piece: rest.type,
-      isSky: rest.isSky,
+      piece: type,
+      isSky,
       from: position,
       height,
       width,
     },
-    canDrag: () => !result.didEnd && isSkyTurn === rest.isSky,
+    canDrag: () => !result.didEnd && isSkyTurn === isSky,
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
   });
 
+  const style = { opacity: isDragging ? 0.15 : 1 };
   return (
     <>
-      <div
-        className={styles.container}
-        ref={drag}
-        style={{ opacity: isDragging ? 0.15 : 1 }}
-      >
-        <Piece {...rest} />
+      <div className={styles.container} ref={drag} style={style}>
+        <Piece type={type} isSky={isSky} {...rest} />
       </div>
+      {number > 1 && (
+        <div
+          className={
+            isSky
+              ? styles.skyCapturedPieceNumber
+              : styles.landCapturedPieceNumber
+          }
+          style={style}
+        >
+          {number}
+        </div>
+      )}
       <Preview>
         <PiecePreview />
       </Preview>
@@ -54,8 +73,11 @@ BoardPiece.propTypes = {
   width: PropTypes.number,
   position: PropTypes.oneOfType([PropTypes.number, PropTypes.object]),
   isSkyTurn: PropTypes.bool,
+  isSky: PropTypes.bool,
+  type: PropTypes.string,
   result: PropTypes.object,
   rest: PropTypes.object,
+  number: PropTypes.number,
 };
 
 export default BoardPiece;

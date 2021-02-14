@@ -1,4 +1,5 @@
 import React, { useReducer, useState } from "react";
+import cloneDeep from "lodash.clonedeep";
 import PropTypes from "prop-types";
 import { DndProvider } from "react-dnd";
 import Backend from "react-dnd-multi-backend";
@@ -61,8 +62,7 @@ const canMove = (gameType, pieces) => (from, to) => {
   return false;
 };
 
-const canDrop = (gameType, pieces) => (isSky, fromIndex, to) =>
-  pieces.board[to.x][to.y].isEmpty;
+const canDrop = (_, pieces) => (_, __, to) => pieces.board[to.x][to.y].isEmpty;
 
 const canBeCaptured = (gameType, pieces) => (pos) => {
   const square = pieces.board[pos.x][pos.y];
@@ -102,10 +102,7 @@ const piecesReducer = (gameType) => (state, action) => {
       if (!state.result.didEnd && canMove(gameType, state.pieces)(from, to)) {
         let canPromote = null;
         let shouldPromote = null;
-        const newCaptured = {
-          land: state.pieces.captured.land.slice(),
-          sky: state.pieces.captured.sky.slice(),
-        };
+        const newCaptured = cloneDeep(state.pieces.captured);
         const result = {
           didEnd: false,
           didWin: false,
@@ -160,10 +157,19 @@ const piecesReducer = (gameType) => (state, action) => {
         if (!toSquare.isEmpty) {
           const capturedType = getDemoted(toSquare.type);
           if (capturedType !== "lion") {
-            newCaptured[fromSquare.isSky ? "sky" : "land"].push({
-              type: capturedType,
-              isSky: fromSquare.isSky,
-            });
+            const teamCaptured = newCaptured[fromSquare.isSky ? "sky" : "land"];
+            const capturedPiece = teamCaptured.find(
+              ({ type }) => type === capturedType
+            );
+            if (capturedPiece) {
+              capturedPiece.number += 1;
+            } else {
+              teamCaptured.push({
+                type: capturedType,
+                isSky: fromSquare.isSky,
+                number: 1,
+              });
+            }
           } else {
             result.didEnd = true;
             result.didWin = true;
@@ -200,7 +206,7 @@ const piecesReducer = (gameType) => (state, action) => {
       }
       return state;
     }
-    case "drop":
+    case "drop": {
       const { isSky, fromIndex, to } = action.payload;
       const team = isSky ? "sky" : "land";
       const piece = state.pieces.captured[team][fromIndex];
@@ -208,13 +214,15 @@ const piecesReducer = (gameType) => (state, action) => {
         !state.result.didEnd &&
         canDrop(gameType, state.pieces)(isSky, fromIndex, to)
       ) {
-        const newCaptured = {
-          land: state.pieces.captured.land.slice(),
-          sky: state.pieces.captured.sky.slice(),
-        };
-        newCaptured[team] = newCaptured[team].filter(
-          (p, index) => index !== fromIndex
-        );
+        const newCaptured = cloneDeep(state.pieces.captured);
+        const capturedPiece = newCaptured[team][fromIndex];
+        if (capturedPiece.number > 1) {
+          capturedPiece.number -= 1;
+        } else {
+          newCaptured[team] = newCaptured[team].filter(
+            (p, index) => index !== fromIndex
+          );
+        }
         const newBoard = state.pieces.board.map((row, i) => {
           // irrelevent row: return as is
           if (i !== to.x) {
@@ -237,7 +245,8 @@ const piecesReducer = (gameType) => (state, action) => {
         };
       }
       return state;
-    case "promote":
+    }
+    case "promote": {
       const { position } = action.payload;
       return {
         ...state,
@@ -261,6 +270,7 @@ const piecesReducer = (gameType) => (state, action) => {
           }),
         },
       };
+    }
     default:
       return state;
   }

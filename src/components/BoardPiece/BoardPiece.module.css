@@ -1,6 +1,37 @@
+@value colors: "../../tokens/colors.css";
+@value board-border from colors;
+
 .container {
+  position: relative;
   cursor: pointer;
   width: 100%;
   height: 100%;
   transform: translate(0, 0);
+}
+
+.capturedPieceNumber {
+  position: absolute;
+  z-index: 200;
+  color: white;
+  background-color: board-border;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.skyCapturedPieceNumber {
+  composes: capturedPieceNumber;
+  bottom: 0;
+  right: 0;
+  transform: rotate(180deg) translate(-20%, -20%);
+}
+
+.landCapturedPieceNumber {
+  composes: capturedPieceNumber;
+  top: 0;
+  left: 0;
+  transform: translate(-20%, -20%);
 }

@@ -100,5 +100,6 @@
 }
 
 .capturedPiece {
+  position: relative;
   margin: 6px;
 }
