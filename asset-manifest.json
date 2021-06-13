@@ -1,29 +1,29 @@
 {
   "files": {
-    "main.css": "/static/css/main.8743cf17.chunk.css",
-    "main.js": "/static/js/main.d6d5e92e.chunk.js",
-    "main.js.map": "/static/js/main.d6d5e92e.chunk.js.map",
-    "runtime-main.js": "/static/js/runtime-main.29aef5fe.js",
-    "runtime-main.js.map": "/static/js/runtime-main.29aef5fe.js.map",
-    "static/js/2.5fcec6e2.chunk.js": "/static/js/2.5fcec6e2.chunk.js",
-    "static/js/2.5fcec6e2.chunk.js.map": "/static/js/2.5fcec6e2.chunk.js.map",
-    "index.html": "/index.html",
-    "precache-manifest.95b740e87fa6387ee19808c374432cd3.js": "/precache-manifest.95b740e87fa6387ee19808c374432cd3.js",
-    "service-worker.js": "/service-worker.js",
-    "static/css/main.8743cf17.chunk.css.map": "/static/css/main.8743cf17.chunk.css.map",
-    "static/js/2.5fcec6e2.chunk.js.LICENSE.txt": "/static/js/2.5fcec6e2.chunk.js.LICENSE.txt",
-    "static/media/index.css": "/static/media/bubblegum.b40c0a33.ttf",
-    "static/media/chick.svg": "/static/media/chick.1595e17d.svg",
-    "static/media/elephant.svg": "/static/media/elephant.c2d34d4d.svg",
-    "static/media/giraffe.svg": "/static/media/giraffe.70bb2a93.svg",
-    "static/media/hen.svg": "/static/media/hen.11a67dae.svg",
-    "static/media/lion.svg": "/static/media/lion.07f5bd3d.svg",
-    "static/media/reset-icon.svg": "/static/media/reset-icon.f651b8d8.svg"
+    "main.css": "/animal-shogi/static/css/main.b25f73a8.chunk.css",
+    "main.js": "/animal-shogi/static/js/main.23cc34cb.chunk.js",
+    "main.js.map": "/animal-shogi/static/js/main.23cc34cb.chunk.js.map",
+    "runtime-main.js": "/animal-shogi/static/js/runtime-main.95f1c1f3.js",
+    "runtime-main.js.map": "/animal-shogi/static/js/runtime-main.95f1c1f3.js.map",
+    "static/js/2.5fcec6e2.chunk.js": "/animal-shogi/static/js/2.5fcec6e2.chunk.js",
+    "static/js/2.5fcec6e2.chunk.js.map": "/animal-shogi/static/js/2.5fcec6e2.chunk.js.map",
+    "index.html": "/animal-shogi/index.html",
+    "precache-manifest.88e26c8408b8bd1e45bb9e331317b47e.js": "/animal-shogi/precache-manifest.88e26c8408b8bd1e45bb9e331317b47e.js",
+    "service-worker.js": "/animal-shogi/service-worker.js",
+    "static/css/main.b25f73a8.chunk.css.map": "/animal-shogi/static/css/main.b25f73a8.chunk.css.map",
+    "static/js/2.5fcec6e2.chunk.js.LICENSE.txt": "/animal-shogi/static/js/2.5fcec6e2.chunk.js.LICENSE.txt",
+    "static/media/index.css": "/animal-shogi/static/media/bubblegum.b40c0a33.ttf",
+    "static/media/chick.svg": "/animal-shogi/static/media/chick.1595e17d.svg",
+    "static/media/elephant.svg": "/animal-shogi/static/media/elephant.c2d34d4d.svg",
+    "static/media/giraffe.svg": "/animal-shogi/static/media/giraffe.70bb2a93.svg",
+    "static/media/hen.svg": "/animal-shogi/static/media/hen.11a67dae.svg",
+    "static/media/lion.svg": "/animal-shogi/static/media/lion.07f5bd3d.svg",
+    "static/media/reset-icon.svg": "/animal-shogi/static/media/reset-icon.f651b8d8.svg"
   },
   "entrypoints": [
-    "static/js/runtime-main.29aef5fe.js",
+    "static/js/runtime-main.95f1c1f3.js",
     "static/js/2.5fcec6e2.chunk.js",
-    "static/css/main.8743cf17.chunk.css",
-    "static/js/main.d6d5e92e.chunk.js"
+    "static/css/main.b25f73a8.chunk.css",
+    "static/js/main.23cc34cb.chunk.js"
   ]
 }
