@@ -41,6 +41,7 @@ jobs:
       - name: Build with React statics
         env:
           NODE_OPTIONS: "--openssl-legacy-provider"
+          CI: "false"
         run: |
           npm run build
       - name: Upload artifact
