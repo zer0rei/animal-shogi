@@ -8,7 +8,8 @@ function Piece({ className, type, isSky }) {
   const boardDimensions = useContext(BoardDimensionsContext);
   const animals = useContext(AnimalsContext);
   const [pieceWidth, setPieceWidth] = useState(0);
-  const { color, image, moves } = animals[type];
+  // Destructure skyColor as well
+  const { color, skyColor, image, moves } = animals[type]; 
 
   const measuredPieceRef = useCallback(
     (node) => {
@@ -21,12 +22,15 @@ function Piece({ className, type, isSky }) {
 
   const moveIndicatorSize = Math.ceil(pieceWidth * 0.05);
 
+  // Determine the backgroundColor based on isSky
+  const pieceColor = isSky ? skyColor : color;
+
   return (
     <div
       className={cls(styles.base, className)}
       ref={measuredPieceRef}
       style={{
-        backgroundColor: color || "white",
+        backgroundColor: pieceColor || "white", // Updated color logic
         transform: isSky && "rotate(180deg)",
         backgroundImage: `url(${image})`,
       }}
