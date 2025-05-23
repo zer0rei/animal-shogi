@@ -3,7 +3,6 @@ name: Deploy React site to Pages
 on:
   push:
     branches: ["master"]
-
   workflow_dispatch:
 
 permissions:
@@ -22,21 +21,23 @@ defaults:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      HUGO_VERSION: 0.128.0
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
+
       - name: Install Node.js dependencies
-        run: "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm ci || true"
+        run: "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm ci || npm install"
+
       - name: Build with React statics
         run: |
           npm run build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./public
+          path: ./build
 
   # Deployment job
   deploy:
