@@ -8,7 +8,7 @@ function Piece({ className, type, isSky }) {
   const boardDimensions = useContext(BoardDimensionsContext);
   const animals = useContext(AnimalsContext);
   const [pieceWidth, setPieceWidth] = useState(0);
-  // Destructure skyColor as well
+
   const { color, skyColor, image, moves } = animals[type]; 
 
   const measuredPieceRef = useCallback(
