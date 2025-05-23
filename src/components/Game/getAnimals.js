@@ -8,31 +8,31 @@ export const getAnimals = (gameType) => ({
   lion: {
     image: lion,
     color: "#f8b9bb",
-    skyColor: "#d8898b", // New darker shade
+    skyColor: "#d8898b",
     moves: ["s**"],
   },
   chick: { 
     image: chick, 
     color: "#ebf2d4", 
-    skyColor: "#c8d0a0", // New darker shade
+    skyColor: "#c8d0a0",
     moves: ["stm"] 
   },
   hen: { 
     image: hen, 
     color: "#ebf2d4", 
-    skyColor: "#c8d0a0", // New darker shade
+    skyColor: "#c8d0a0",
     moves: ["st*", "sm*", "sbm"] 
   },
   elephant: {
     image: elephant,
     color: "#cdaed0",
-    skyColor: "#a889ac", // New darker shade
+    skyColor: "#a889ac",
     moves: ["stl", "str", "sbl", "sbr"],
   },
   giraffe: { 
     image: giraffe, 
     color: "#cdaed0", 
-    skyColor: "#a889ac", // New darker shade
+    skyColor: "#a889ac",
     moves: ["s*m", "sm*"] 
   },
 });
