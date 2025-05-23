@@ -30,7 +30,7 @@ function Piece({ className, type, isSky }) {
       className={cls(styles.base, className)}
       ref={measuredPieceRef}
       style={{
-        backgroundColor: pieceColor || "white", // Updated color logic
+        backgroundColor: pieceColor || "white",
         transform: isSky && "rotate(180deg)",
         backgroundImage: `url(${image})`,
       }}
