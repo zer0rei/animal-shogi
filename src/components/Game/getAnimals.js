@@ -8,7 +8,7 @@ export const getAnimals = (gameType) => ({
   lion: {
     image: lion,
     color: "#f8b9bb",
-    skyColor: "#d8898b"
+    skyColor: "#d8898b",
     moves: ["s**"],
   },
   chick: { 
