@@ -24,6 +24,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
@@ -32,6 +39,8 @@ jobs:
         run: "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm ci || npm install"
 
       - name: Build with React statics
+        env:
+          NODE_OPTIONS: "--openssl-legacy-provider"
         run: |
           npm run build
       - name: Upload artifact
