@@ -8,16 +8,33 @@ export const getAnimals = (gameType) => ({
   lion: {
     image: lion,
     color: "#f8b9bb",
+    skyColor: "#f0a0a2",
     moves: ["s**"],
   },
-  chick: { image: chick, color: "#ebf2d4", moves: ["stm"] },
-  hen: { image: hen, color: "#ebf2d4", moves: ["st*", "sm*", "sbm"] },
+  chick: { 
+    image: chick, 
+    color: "#ebf2d4", 
+    skyColor: "#d8e0c0",
+    moves: ["stm"] 
+  },
+  hen: { 
+    image: hen, 
+    color: "#ebf2d4", 
+    skyColor: "#d8e0c0",
+    moves: ["st*", "sm*", "sbm"] 
+  },
   elephant: {
     image: elephant,
     color: "#cdaed0",
+    skyColor: "#b899bc",
     moves: ["stl", "str", "sbl", "sbr"],
   },
-  giraffe: { image: giraffe, color: "#cdaed0", moves: ["s*m", "sm*"] },
+  giraffe: { 
+    image: giraffe, 
+    color: "#cdaed0", 
+    skyColor: "#b899bc",
+    moves: ["s*m", "sm*"] 
+  },
 });
 
 const promotions = {
