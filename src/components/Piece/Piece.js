@@ -8,7 +8,7 @@ function Piece({ className, type, isSky }) {
   const boardDimensions = useContext(BoardDimensionsContext);
   const animals = useContext(AnimalsContext);
   const [pieceWidth, setPieceWidth] = useState(0);
-  // Destructure skyColor as well
+
   const { color, skyColor, image, moves } = animals[type]; 
 
   const measuredPieceRef = useCallback(
@@ -30,7 +30,7 @@ function Piece({ className, type, isSky }) {
       className={cls(styles.base, className)}
       ref={measuredPieceRef}
       style={{
-        backgroundColor: pieceColor || "white", // Updated color logic
+        backgroundColor: pieceColor || "white",
         transform: isSky && "rotate(180deg)",
         backgroundImage: `url(${image})`,
       }}
