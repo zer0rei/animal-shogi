@@ -1,17 +1,15 @@
 .base {
-  min-width: 36px; /* Allow wider for text */
+  width: 36px;
   height: 36px;
-  font-size: 14px; /* More reasonable for text */
-  line-height: 36px; /* Keep vertical alignment for icons and text */
+  font-size: 36px;
+  line-height: 36px;
   font-weight: bold;
   text-align: center;
-  border-radius: 8px; /* More suitable for variable width */
-  margin: 0 4px; /* Add some horizontal margin */
-  padding: 0 10px; /* Horizontal padding for text */
-  display: inline-flex; /* Helps with vertical alignment of content */
-  align-items: center; /* Vertical alignment */
-  justify-content: center; /* Horizontal alignment */
-  box-sizing: border-box; /* Easier to manage padding and borders */
+  border-radius: 50%;
+  margin: 0;
+  padding: 4px;
+  display: inline-block;
+  box-sizing: content-box;
   background-color: transparent;
   background-position: center;
   background-size: cover;
@@ -33,9 +31,9 @@
 .base:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background-color: transparent; /* Ensure hover/active styles don't interfere */
+  background-color: transparent;
 }
 
 .base:disabled:hover {
-  background-color: transparent; /* Prevent hover style on disabled */
+  background-color: transparent;
 }

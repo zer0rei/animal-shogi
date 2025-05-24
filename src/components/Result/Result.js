@@ -6,14 +6,13 @@ import styles from "./Result.module.css";
 
 function Result({ className, didSkyWin, isDraw, onClose, onReset }) {
   let message;
-  let illustrationClassName; // Used for ResultIllustration's main class
+  let illustrationClassName;
   let actionButtonClassName;
 
   if (isDraw) {
     message = "IT'S A DRAW!";
-    // Assuming no specific draw illustration, use a neutral or default style
-    illustrationClassName = styles.landStar; // Or a new 'drawStar' if defined
-    actionButtonClassName = styles.landButton; // Or a neutral button style
+    illustrationClassName = styles.backgroundStar;
+    actionButtonClassName = styles.backgroundButton;
   } else if (didSkyWin) {
     message = "SKY WINS";
     illustrationClassName = styles.skyStar;
@@ -47,7 +46,7 @@ function Result({ className, didSkyWin, isDraw, onClose, onReset }) {
 
 Result.defaultProps = {
   className: "",
-  didSkyWin: false, // Explicitly define default for clarity
+  didSkyWin: false,
   isDraw: false, 
 };
 

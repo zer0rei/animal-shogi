@@ -21,27 +21,27 @@ export const getAnimals = (gameType) => ({
   },
   cat: {
     image: cat,
-    color: "#a6d8a6", // Green
-    skyColor: "#85b985", // Darker Green
-    moves: ["stm"], // Moves one step forward
+    color: "#a6d8a6",
+    skyColor: "#85b985",
+    moves: ["st*", "sbl", "sbr"] 
   },
   dog: {
     image: dog,
-    color: "#f8c9a0", // Orange
-    skyColor: "#e0a878", // Darker Orange
-    moves: ["stl", "stm", "str", "sbl", "sbr"], // Silver general moves
+    color: "#f8c9a0",
+    skyColor: "#e0a878",
+    moves: ["st*", "sm*", "sbm"] 
   },
   empoweredCat: {
-    image: dog, // Uses dog asset as per requirement
-    color: "#f8c9a0", // Orange (same as dog)
-    skyColor: "#e0a878", // Darker Orange (same as dog)
-    moves: ["stl", "stm", "str", "sbl", "sbr"], // Same moves as dog
+    image: cat,
+    color: "#f8c9a0",
+    skyColor: "#e0a878",
+    moves: ["st*", "sm*", "sbm"] 
   },
   hen: { 
     image: hen, 
-    color: "#f8c9a0", // Orange, same as dog
-    skyColor: "#e0a878", // Darker Orange, same as dog
-    moves: ["stl", "stm", "str", "sbl", "sbr"] // Silver general moves, same as dog
+    color: "#f8c9a0",
+    skyColor: "#e0a878",
+    moves: ["st*", "sm*", "sbm"] 
   },
   elephant: {
     image: elephant,

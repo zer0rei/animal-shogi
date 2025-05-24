@@ -1,9 +1,6 @@
 import React, { useReducer, useState } from "react";
 import cloneDeep from "lodash.clonedeep";
 import PropTypes from "prop-types";
-import { DndProvider } from "react-dnd";
-import Backend from "react-dnd-multi-backend";
-import HTML5toTouch from "react-dnd-multi-backend/dist/esm/HTML5toTouch";
 import Board from "../Board";
 import IconButton from "../IconButton";
 import Result from "../Result";
@@ -18,19 +15,14 @@ import getAnimals, { getPromoted, getDemoted, isPromoted } from "./getAnimals";
 import getInitialPieces from "./getInitialPieces";
 import styles from "./Game.module.css";
 
-// Helper function (can be placed at the top level of Game.js, near other helpers like isOutOfBound)
-// It needs access to getAnimals and validateDestination
-// We also need getPromoted, getDemoted, isPromoted from './getAnimals' if not already imported
-// And import { getAnimals, /* other exports from getAnimals if needed */ } from './getAnimals';
 
 const isSquareAttacked = (gameType, board, targetPos, targetOwnerIsSky) => {
-  const animals = getAnimals(gameType); // Get animals for move definitions
+  const animals = getAnimals(gameType);
 
   for (let r = 0; r < board.length; r++) {
     for (let c = 0; c < board[0].length; c++) {
       const attackerSquare = board[r][c];
       if (!attackerSquare.isEmpty && attackerSquare.isSky !== targetOwnerIsSky) {
-        // This is an opponent's piece
         const attackerMoves = animals[attackerSquare.type]?.moves;
         if (attackerMoves) {
           for (const move of attackerMoves) {
@@ -115,31 +107,27 @@ const canMove = (gameType, pieces) => (from, to) => {
   return false;
 };
 
-// Modified canDrop for Nifu rule
 const canDrop = (gameType, pieces) => (isSky, fromIndex, to) => {
-  // Existing check: square must be empty
   if (!pieces.board[to.x][to.y].isEmpty) {
     return false;
   }
 
   // Nifu (Two Pawns) rule for 'chick'
-  if (gameType === "animalShogi") { 
+  if (gameType !== "micro") { 
     const pieceToDrop = pieces.captured[isSky ? "sky" : "land"][fromIndex];
     if (pieceToDrop.type === "chick") {
-      const { numRows } = getSettings(gameType); // Get numRows
+      const { numRows } = getSettings(gameType); 
       for (let i = 0; i < numRows; i++) {
-        const square = pieces.board[i][to.y]; // Check same column
-        // Check if square is not empty, is a chick, belongs to the current player, and is not promoted (isPromoted is not available here, assume type 'chick' means unpromoted)
+        const square = pieces.board[i][to.y]; 
+        // Check if square is not empty, is a chick, belongs to the current player,
+        // and is not promoted (isPromoted is not available here, assume type 'chick' means unpromoted)
         if (!square.isEmpty && square.type === "chick" && square.isSky === isSky) {
-          // isPromoted check is missing here, but problem implies 'chick' means unpromoted.
-          // If 'hen' is the promoted form, and a 'hen' is in the column, dropping 'chick' should be allowed.
-          // The current logic correctly checks for 'chick' type.
-          return false; // Found another unpromoted chick of the same player in the column
+          return false;
         }
       }
     }
   }
-  return true; // If all checks pass
+  return true;
 };
 
 const canBeCaptured = (gameType, pieces) => (pos) => {
@@ -171,7 +159,7 @@ const piecesReducer = (gameType) => (state, action) => {
       return {
         initialState: state.initialState,
         ...state.initialState,
-        moveHistory: [], // Reset move history
+        moveHistory: [],
         result: { ...state.initialState.result, isDraw: false }, 
       };
     }
@@ -187,12 +175,11 @@ const piecesReducer = (gameType) => (state, action) => {
           didEnd: false,
           didWin: false,
           didSkyWin: false,
-          isDraw: false, // Ensure this is initialized
+          isDraw: false,
         };
         const fromSquare = state.pieces.board[from.x][from.y];
         const toSquare = state.pieces.board[to.x][to.y];
         const newBoard = state.pieces.board.map((row, i) => {
-          // irrelevent row: return as is
           if (i !== from.x && i !== to.x) {
             return row;
           }
@@ -213,48 +200,44 @@ const piecesReducer = (gameType) => (state, action) => {
         });
         // promotion
         if (!isPromoted(fromSquare.type)) {
-          // numRows is already available from the reducer's scope
-          // const { numRows } = getSettings(gameType); 
-
-          if (gameType === "animalShogi") {
-            // Animal Shogi (5x6 board, 6 rows) promotion rules: last 2 ranks
-            const promotionZoneStartSky = numRows - 2; // Row 4 (0-indexed)
-            const forcedPromotionRowSky = numRows - 1; // Row 5
-            const promotionZoneStartLand = 1; // Row 1
-            const forcedPromotionRowLand = 0; // Row 0
+          if (gameType !== "micro") {
+            const promotionZoneStartSky = numRows - 2;
+            const forcedPromotionRowSky = numRows - 1;
+            const promotionZoneStartLand = 1;
+            const forcedPromotionRowLand = 0;
 
             if (fromSquare.isSky) {
               if (to.x >= promotionZoneStartSky) { // Entered or is within promotion zone
                 if ((fromSquare.type === "chick" || fromSquare.type === "cat") && to.x === forcedPromotionRowSky) {
                   shouldPromote = to;
-                } else if (fromSquare.type === "chick" || fromSquare.type === "cat") { // Cat also promotes
+                } else if (fromSquare.type === "chick" || fromSquare.type === "cat") {
                   canPromote = to;
                 }
               }
-            } else { // Land player
+            } else {
               if (to.x <= promotionZoneStartLand) { // Entered or is within promotion zone
                 if ((fromSquare.type === "chick" || fromSquare.type === "cat") && to.x === forcedPromotionRowLand) {
                   shouldPromote = to;
-                } else if (fromSquare.type === "chick" || fromSquare.type === "cat") { // Cat also promotes
+                } else if (fromSquare.type === "chick" || fromSquare.type === "cat") {
                   canPromote = to;
                 }
               }
             }
-          } else { // Existing logic for "micro" or other types
-            const numRowsInSky = Math.floor(numRows / 3); // Standard promotion depth
+          } else { 
+            const numRowsInSky = Math.floor(numRows / 3);
             if (fromSquare.isSky) {
               if (from.x >= numRows - numRowsInSky || to.x >= numRows - numRowsInSky) {
                 if (fromSquare.type === "chick" && to.x === numRows - 1) {
                   shouldPromote = to;
-                } else if (fromSquare.type === "chick") { // Only chick promotes in micro
+                } else if (fromSquare.type === "chick") { 
                   canPromote = to;
                 }
               }
-            } else { // Land player
+            } else { 
               if (from.x < numRowsInSky || to.x < numRowsInSky) {
                 if (fromSquare.type === "chick" && to.x === 0) {
                   shouldPromote = to;
-                } else if (fromSquare.type === "chick") { // Only chick promotes in micro
+                } else if (fromSquare.type === "chick") { 
                   canPromote = to;
                 }
               }
@@ -322,8 +305,8 @@ const piecesReducer = (gameType) => (state, action) => {
 
           if (repetitionCount >= 4) {
             result.didEnd = true;
-            result.didWin = false; // No winner
-            result.isDraw = true; // Set draw flag
+            result.didWin = false; 
+            result.isDraw = true;
           }
         }
         
@@ -331,7 +314,7 @@ const piecesReducer = (gameType) => (state, action) => {
           ...state,
           pieces: newPieces,
           isSkyTurn: !state.isSkyTurn,
-          result, // result might have been updated for draw
+          result,
           moveHistory: finalMoveHistory, 
         };
       }
@@ -340,7 +323,7 @@ const piecesReducer = (gameType) => (state, action) => {
     case "drop": {
       const { isSky, fromIndex, to } = action.payload;
       const team = isSky ? "sky" : "land";
-      const pieceToDrop = state.pieces.captured[team][fromIndex]; // Renamed for clarity
+      const pieceToDrop = state.pieces.captured[team][fromIndex];
       if (
         !state.result.didEnd &&
         canDrop(gameType, state.pieces)(isSky, fromIndex, to)
@@ -355,15 +338,14 @@ const piecesReducer = (gameType) => (state, action) => {
           );
         }
         const newBoard = state.pieces.board.map((row, i) => {
-          // irrelevent row: return as is
           if (i !== to.x) {
             return row;
           }
           return row.map((square, j) => {
             if (j === to.y) {
               return {
-                type: pieceToDrop.type, // Use pieceToDrop
-                isSky: pieceToDrop.isSky, // Use pieceToDrop
+                type: pieceToDrop.type, 
+                isSky: pieceToDrop.isSky, 
               };
             }
             return square;
@@ -371,7 +353,7 @@ const piecesReducer = (gameType) => (state, action) => {
         });
 
         // Uchifu-dzume (Pawn drop checkmate) simplified: disallow chick drop causing check
-        if (gameType === "animalShogi") {
+        if (gameType !== "micro") {
           if (pieceToDrop.type === "chick") {
             let opponentsLionPosition = null;
             const { numRows, numCols } = getSettings(gameType);
@@ -388,19 +370,16 @@ const piecesReducer = (gameType) => (state, action) => {
             if (opponentsLionPosition) {
               if (isSquareAttacked(gameType, newBoard, opponentsLionPosition, !isSky)) {
                 // If dropping a chick results in a check to the opponent's Lion, it's disallowed.
-                return state; // Revert by returning the original state
+                return state;
               }
             }
           }
         }
         
-        // If all checks pass, return the new state
         return {
           ...state,
           pieces: { board: newBoard, captured: newCaptured },
           isSkyTurn: !state.isSkyTurn,
-          // moveHistory is not directly managed here, but by the 'move' action.
-          // If a drop was reverted, moveHistory remains unchanged from the previous state.
         };
       }
       return state;
@@ -435,18 +414,18 @@ const piecesReducer = (gameType) => (state, action) => {
   }
 };
 
-function Game({ config, onHelp, onConfigChange }) { // Changed from setGameType
-  const { gameType } = config; // gameType is already being extracted
+function Game({ config, onHelp, onConfigChange }) { 
+  const { gameType } = config; 
   const initialState = {
     result: {
       didEnd: false,
       didWin: false,
       didSkyWin: false,
-      isDraw: false, // Add isDraw here
+      isDraw: false,
     },
     isSkyTurn: false,
     pieces: getInitialPieces(gameType),
-    moveHistory: [], // New property
+    moveHistory: [],
   };
   const [{ pieces, isSkyTurn, result, moveHistory }, dispatch] = useReducer(
     piecesReducer(gameType),
@@ -473,64 +452,58 @@ function Game({ config, onHelp, onConfigChange }) { // Changed from setGameType
   const drop = (isSky, from, to) =>
     dispatch({ type: "drop", payload: { isSky, fromIndex: from, to } });
 
+  const nextGameType = gameType === "micro" ? "goro" : "micro";
+  const nextGameTypeLabel = nextGameType === "micro" ? "S" : "M";
+  const nextGameTypeAria = nextGameType === "micro" ? "Switch to 3x4 game" : "Switch to 5x6 game";
+
   return (
-    <DndProvider backend={Backend} options={HTML5toTouch}>
-      <AnimalsContext.Provider value={animals}>
-        <GameStateContext.Provider value={{ pieces, isSkyTurn, result }}>
-          <GameDispatchContext.Provider
-            value={{
-              canMove: canMove(gameType, pieces),
-              move,
-              canDrop: canDrop(gameType, pieces),
-              drop,
-            }}
-          >
-            <Board
-              numCols={numCols}
-              numRows={numRows}
-              numRowsInSky={numRowsInSky}
+    <AnimalsContext.Provider value={animals}>
+      <GameStateContext.Provider value={{ pieces, isSkyTurn, result }}>
+        <GameDispatchContext.Provider
+          value={{
+            canMove: canMove(gameType, pieces),
+            move,
+            canDrop: canDrop(gameType, pieces),
+            drop,
+          }}
+        >
+          <Board
+            numCols={numCols}
+            numRows={numRows}
+            numRowsInSky={numRowsInSky}
+          />
+          <div className={styles.iconButtonsContainer}>
+            <IconButton icon={resetIcon} ariaLabel="replay" onClick={reset} />
+            <IconButton
+              className={styles.helpButton}
+              text="?"
+              ariaLabel="help"
+              onClick={onHelp}
             />
-            <div className={styles.iconButtonsContainer}>
-              <IconButton
-                text="3x4"
-                ariaLabel="Switch to 3x4 game"
-                onClick={() => onConfigChange({ gameType: "micro" })} // Updated
-                disabled={gameType === "micro"}
-                // className={gameType === "micro" ? styles.activeButton : ""} // Example for active style
-              />
-              <IconButton
-                text="5x6"
-                ariaLabel="Switch to 5x6 game"
-                onClick={() => onConfigChange({ gameType: "animalShogi" })} // Updated
-                disabled={gameType === "animalShogi"}
-                // className={gameType === "animalShogi" ? styles.activeButton : ""} // Example for active style
-              />
-              <IconButton icon={resetIcon} ariaLabel="replay" onClick={reset} />
-              <IconButton
-                className={styles.helpButton}
-                text="?"
-                ariaLabel="help"
-                onClick={onHelp}
-              />
-            </div>
-            {!resultClosed && result.didEnd && (
-              <Result
-                didSkyWin={result.didSkyWin}
-                onReset={reset}
-                onClose={() => setResultClosed(true)}
-              />
-            )}
-          </GameDispatchContext.Provider>
-        </GameStateContext.Provider>
-      </AnimalsContext.Provider>
-    </DndProvider>
+            <IconButton
+              text={nextGameTypeLabel}
+              ariaLabel={nextGameTypeAria}
+              onClick={() => onConfigChange({ gameType: nextGameType })}
+            />
+          </div>
+          {!resultClosed && result.didEnd && (
+            <Result
+              didSkyWin={result.didSkyWin}
+              isDraw={result.isDraw}
+              onReset={reset}
+              onClose={() => setResultClosed(true)}
+            />
+          )}
+        </GameDispatchContext.Provider>
+      </GameStateContext.Provider>
+    </AnimalsContext.Provider>
   );
 }
 
 Game.propTypes = {
   config: PropTypes.object,
   onHelp: PropTypes.func,
-  onConfigChange: PropTypes.func, // Changed from setGameType
+  onConfigChange: PropTypes.func,
 };
 
 export default Game;

@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { DndProvider } from "react-dnd";
+import Backend from "react-dnd-multi-backend";
+import HTML5toTouch from "react-dnd-multi-backend/dist/esm/HTML5toTouch";
 import { WindowDimensionsContext } from "../../contexts";
 import { helpURL } from "../../constants";
 import Game from "../Game";
@@ -11,10 +14,6 @@ function getWindowDimensions() {
   };
 }
 
-// const config = {
-//   gameType: "micro",
-// };
-
 function App() {
   const [gameType, setGameType] = useState("micro");
   const [windowDimensions, setWindowDimensions] = useState(
@@ -25,10 +24,6 @@ function App() {
     if (newConfigSettings.hasOwnProperty('gameType')) {
       setGameType(newConfigSettings.gameType);
     }
-    // Future settings could be handled here, e.g.:
-    // if (newConfigSettings.hasOwnProperty('difficulty')) {
-    //   setDifficulty(newConfigSettings.difficulty);
-    // }
   };
 
   useEffect(() => {
@@ -47,15 +42,16 @@ function App() {
   };
 
   return (
-    <WindowDimensionsContext.Provider value={windowDimensions}>
-      {/* The div containing the game type switching buttons has been removed */}
-      <Game
-        key={gameType}
-        config={{ gameType: gameType }}
-        onHelp={handleHelp}
-        onConfigChange={handleConfigChange} // Changed from setGameType
-      />
-    </WindowDimensionsContext.Provider>
+    <DndProvider backend={Backend} options={HTML5toTouch}>
+      <WindowDimensionsContext.Provider value={windowDimensions}>
+        <Game
+          key={gameType}
+          config={{ gameType }}
+          onHelp={handleHelp}
+          onConfigChange={handleConfigChange}
+        />
+      </WindowDimensionsContext.Provider>
+    </DndProvider>
   );
 }
 
