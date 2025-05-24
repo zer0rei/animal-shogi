@@ -3,6 +3,8 @@ import chick from "../../assets/chick.svg";
 import hen from "../../assets/hen.svg";
 import elephant from "../../assets/elephant.svg";
 import giraffe from "../../assets/giraffe.svg";
+import cat from "../../assets/cat.svg";
+import dog from "../../assets/dog.svg";
 
 export const getAnimals = (gameType) => ({
   lion: {
@@ -17,11 +19,29 @@ export const getAnimals = (gameType) => ({
     skyColor: "#c8d0a0",
     moves: ["stm"] 
   },
+  cat: {
+    image: cat,
+    color: "#a6d8a6", // Green
+    skyColor: "#85b985", // Darker Green
+    moves: ["stm"], // Moves one step forward
+  },
+  dog: {
+    image: dog,
+    color: "#f8c9a0", // Orange
+    skyColor: "#e0a878", // Darker Orange
+    moves: ["stl", "stm", "str", "sbl", "sbr"], // Silver general moves
+  },
+  empoweredCat: {
+    image: dog, // Uses dog asset as per requirement
+    color: "#f8c9a0", // Orange (same as dog)
+    skyColor: "#e0a878", // Darker Orange (same as dog)
+    moves: ["stl", "stm", "str", "sbl", "sbr"], // Same moves as dog
+  },
   hen: { 
     image: hen, 
-    color: "#ebf2d4", 
-    skyColor: "#c8d0a0",
-    moves: ["st*", "sm*", "sbm"] 
+    color: "#f8c9a0", // Orange, same as dog
+    skyColor: "#e0a878", // Darker Orange, same as dog
+    moves: ["stl", "stm", "str", "sbl", "sbr"] // Silver general moves, same as dog
   },
   elephant: {
     image: elephant,
@@ -39,6 +59,7 @@ export const getAnimals = (gameType) => ({
 
 const promotions = {
   chick: "hen",
+  cat: "empoweredCat",
 };
 
 export const getPromoted = (type) => {

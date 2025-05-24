@@ -11,14 +11,25 @@ function getWindowDimensions() {
   };
 }
 
-const config = {
-  gameType: "micro",
-};
+// const config = {
+//   gameType: "micro",
+// };
 
 function App() {
+  const [gameType, setGameType] = useState("micro");
   const [windowDimensions, setWindowDimensions] = useState(
     getWindowDimensions()
   );
+
+  const handleConfigChange = (newConfigSettings) => {
+    if (newConfigSettings.hasOwnProperty('gameType')) {
+      setGameType(newConfigSettings.gameType);
+    }
+    // Future settings could be handled here, e.g.:
+    // if (newConfigSettings.hasOwnProperty('difficulty')) {
+    //   setDifficulty(newConfigSettings.difficulty);
+    // }
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -37,7 +48,13 @@ function App() {
 
   return (
     <WindowDimensionsContext.Provider value={windowDimensions}>
-      <Game config={config} onHelp={handleHelp} />
+      {/* The div containing the game type switching buttons has been removed */}
+      <Game
+        key={gameType}
+        config={{ gameType: gameType }}
+        onHelp={handleHelp}
+        onConfigChange={handleConfigChange} // Changed from setGameType
+      />
     </WindowDimensionsContext.Provider>
   );
 }
