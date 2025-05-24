@@ -4,19 +4,33 @@ import { cls } from "../../helpers";
 import ResultIllustration from "../ResultIllustration";
 import styles from "./Result.module.css";
 
-function Result({ className, didSkyWin, onClose, onReset }) {
-  const resultMessage = didSkyWin ? "SKY WINS" : "LAND WINS";
-  const actionButtonClassName = didSkyWin
-    ? styles.skyButton
-    : styles.landButton;
+function Result({ className, didSkyWin, isDraw, onClose, onReset }) {
+  let message;
+  let illustrationClassName;
+  let actionButtonClassName;
+
+  if (isDraw) {
+    message = "IT'S A DRAW!";
+    illustrationClassName = styles.backgroundStar;
+    actionButtonClassName = styles.backgroundButton;
+  } else if (didSkyWin) {
+    message = "SKY WINS";
+    illustrationClassName = styles.skyStar;
+    actionButtonClassName = styles.skyButton;
+  } else {
+    message = "LAND WINS";
+    illustrationClassName = styles.landStar;
+    actionButtonClassName = styles.landButton;
+  }
+
   return (
     <>
       <div className={styles.background} />
       <div className={cls(styles.container, className)}>
         <ResultIllustration
-          className={didSkyWin ? styles.skyStar : styles.landStar}
+          className={illustrationClassName}
         />
-        <h1 className={styles.resultText}>{resultMessage}</h1>
+        <h1 className={styles.resultText}>{message}</h1>
         <div className={styles.actionButtonContainer}>
           <button className={actionButtonClassName} onClick={onReset}>
             REPLAY
@@ -32,11 +46,14 @@ function Result({ className, didSkyWin, onClose, onReset }) {
 
 Result.defaultProps = {
   className: "",
+  didSkyWin: false,
+  isDraw: false, 
 };
 
 Result.propTypes = {
   className: PropTypes.string,
   didSkyWin: PropTypes.bool,
+  isDraw: PropTypes.bool,
   onClose: PropTypes.func,
   onReset: PropTypes.func,
 };

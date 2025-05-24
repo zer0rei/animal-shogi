@@ -22,7 +22,6 @@ function Piece({ className, type, isSky }) {
 
   const moveIndicatorSize = Math.ceil(pieceWidth * 0.05);
 
-  // Determine the backgroundColor based on isSky
   const pieceColor = isSky ? skyColor : color;
 
   return (

@@ -3,6 +3,8 @@ import chick from "../../assets/chick.svg";
 import hen from "../../assets/hen.svg";
 import elephant from "../../assets/elephant.svg";
 import giraffe from "../../assets/giraffe.svg";
+import cat from "../../assets/cat.svg";
+import dog from "../../assets/dog.svg";
 
 export const getAnimals = (gameType) => ({
   lion: {
@@ -17,10 +19,28 @@ export const getAnimals = (gameType) => ({
     skyColor: "#c8d0a0",
     moves: ["stm"] 
   },
+  cat: {
+    image: cat,
+    color: "#a6d8a6",
+    skyColor: "#85b985",
+    moves: ["st*", "sbl", "sbr"] 
+  },
+  dog: {
+    image: dog,
+    color: "#f8c9a0",
+    skyColor: "#e0a878",
+    moves: ["st*", "sm*", "sbm"] 
+  },
+  empoweredCat: {
+    image: cat,
+    color: "#f8c9a0",
+    skyColor: "#e0a878",
+    moves: ["st*", "sm*", "sbm"] 
+  },
   hen: { 
     image: hen, 
-    color: "#ebf2d4", 
-    skyColor: "#c8d0a0",
+    color: "#f8c9a0",
+    skyColor: "#e0a878",
     moves: ["st*", "sm*", "sbm"] 
   },
   elephant: {
@@ -39,6 +59,7 @@ export const getAnimals = (gameType) => ({
 
 const promotions = {
   chick: "hen",
+  cat: "empoweredCat",
 };
 
 export const getPromoted = (type) => {

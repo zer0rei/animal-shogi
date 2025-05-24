@@ -1,6 +1,6 @@
 @value colors: "../../tokens/colors.css";
 @value fonts: "../../tokens/fonts.css";
-@value sky, land from colors;
+@value backgroundDark as bgColor, sky, land from colors;
 @value result from fonts;
 
 .background {
@@ -21,6 +21,10 @@
   transform: translate(-50%, -50%);
   text-align: center;
   z-index: 1000;
+}
+
+.backgroundStar {
+  fill: bgColor;
 }
 
 .landStar {
@@ -79,6 +83,11 @@
 
 .actionButton:active:before {
   background-color: rgba(255, 255, 255, 0.4);
+}
+
+.backgroundButton {
+  composes: actionButton;
+  background-color: bgColor;
 }
 
 .landButton {
