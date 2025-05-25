@@ -327,30 +327,6 @@ const piecesReducer = (gameType) => (state, action) => {
             return square;
           });
         });
-
-        // Uchifu-dzume (Pawn drop checkmate) simplified: disallow chick drop causing check
-        if (gameType !== "micro") {
-          if (pieceToDrop.type === "chick") {
-            let opponentsLionPosition = null;
-            const { numRows, numCols } = getSettings(gameType);
-            for (let r = 0; r < numRows; r++) {
-              for (let c = 0; c < numCols; c++) {
-                if (newBoard[r][c].type === "lion" && newBoard[r][c].isSky === !isSky) {
-                  opponentsLionPosition = { x: r, y: c };
-                  break;
-                }
-              }
-              if (opponentsLionPosition) break;
-            }
-
-            if (opponentsLionPosition) {
-              if (isSquareAttacked(gameType, newBoard, opponentsLionPosition, !isSky)) {
-                // If dropping a chick results in a check to the opponent's Lion, it's disallowed.
-                return state;
-              }
-            }
-          }
-        }
         
         return {
           ...state,
