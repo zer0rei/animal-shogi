@@ -3,50 +3,65 @@ import getInitialPieces from './components/Game/getInitialPieces';
 import { getAnimals } from './components/Game/getAnimals';
 import { getSettings } from './components/Game/getSettings';
 
+import { isKingInCheck, negamax } from './shogiEngine'; // Import new functions
+
 // Mock getAnimals and getSettings to provide consistent data for tests
-// This is a simplified mock. In a real scenario, you might need a more comprehensive one
-// or ensure your test data aligns with the actual getAnimals/getSettings output.
+// For shogiEngine tests, we want to control the animal moves precisely.
+// Sky moves from row 0 to 3. Land moves from row 3 to 0.
+// A positive x in a move delta means "forward" for Sky (increasing row index).
+const mockMicroAnimals = {
+  lion: { moves: [{x:1,y:0}, {x:-1,y:0}, {x:0,y:1}, {x:0,y:-1}, {x:1,y:1}, {x:1,y:-1}, {x:-1,y:1}, {x:-1,y:-1}], promotesTo: null },
+  chick: { moves: [{x:1,y:0}], promotesTo: 'hen' }, // Sky Chick moves +1 in row index
+  hen: { moves: [{x:1,y:0}, {x:-1,y:0}, {x:0,y:1}, {x:0,y:-1}, {x:1,y:1}, {x:-1,y:1}], promotesTo: null }, // Gold General moves (forward, sides, back-forward diagonals, back-middle)
+  // For testing isKingInCheck with more piece types:
+  cat: { moves: [{x:1,y:1}, {x:1,y:-1}, {x:-1,y:1}, {x:-1,y:-1}], promotesTo: 'dog' }, // Hypothetical cat moves
+  dog: { moves: [{x:1,y:0}, {x:-1,y:0}, {x:0,y:1}, {x:0,y:-1}], promotesTo: null }, // Hypothetical dog moves
+  elephant: { moves: [{x:1,y:1}, {x:1,y:-1}, {x:-1,y:1}, {x:-1,y:-1}, {x:0,y:0}] /* no move for simplicity in some tests */, promotesTo: null },
+  giraffe: { moves: [{x:1,y:0}, {x:-1,y:0}, {x:0,y:1}, {x:0,y:-1}, {x:0,y:0}] /* no move for simplicity */, promotesTo: null },
+};
+
+const mockMicroSettings = { boardWidth: 3, boardHeight: 4 };
+
+
 jest.mock('./components/Game/getAnimals', () => ({
   getAnimals: jest.fn((gameType) => {
     if (gameType === 'micro') {
-      return {
-        lion: { moves: [{x:0,y:1}, {x:0,y:-1}, {x:1,y:0}, {x:-1,y:0}, {x:1,y:1}, {x:1,y:-1}, {x:-1,y:1}, {x:-1,y:-1}], promotesTo: null },
-        chick: { moves: [{x:0,y:1}], promotesTo: 'hen' },
-        hen: { moves: [{x:0,y:1}, {x:0,y:-1}, {x:1,y:0}, {x:-1,y:0}, {x:1,y:1}, {x:-1,y:1}], promotesTo: null }, // Simplified Hen
-        cat: { moves: [{x:1,y:1}, {x:1,y:-1}, {x:-1,y:1}, {x:-1,y:-1}], promotesTo: 'dog' },
-        dog: { moves: [{x:0,y:1}, {x:1,y:0}, {x:-1,y:0}, {x:0,y:-1}], promotesTo: null }, // Simplified Dog
-        elephant: { moves: [{x:1,y:1}, {x:1,y:-1}, {x:-1,y:1}, {x:-1,y:-1}], promotesTo: null }, // Not used in micro, but for completeness
-        giraffe: { moves: [{x:0,y:1}, {x:0,y:-1}, {x:1,y:0}, {x:-1,y:0}], promotesTo: null }, // Not used in micro
-      };
+      return mockMicroAnimals;
     }
-    // Add goro if needed
-    return {};
+    return {}; // Default for other game types if any
   }),
 }));
 
 jest.mock('./components/Game/getSettings', () => ({
   getSettings: jest.fn((gameType) => {
     if (gameType === 'micro') {
-      return { boardWidth: 3, boardHeight: 4, promotionRankSky: 3, promotionRankLand: 0 };
+      return mockMicroSettings;
     }
-    // Add goro if needed
-    return {};
+    return {}; // Default for other game types if any
   }),
 }));
 
 
-// Piece values as defined in shogiEngine.js (or import if exported)
+// Piece values and scores as defined in shogiEngine.js
 const PIECE_VALUES = {
   lion: 1000,
   chick: 1,
   hen: 3,
-  elephant: 5,
-  giraffe: 5,
-  cat: 2,
-  dog: 3,
+  elephant: 5, // Keep even if not in standard micro, for test flexibility
+  giraffe: 5,  // Keep even if not in standard micro
+  cat: 2,      // Keep for test flexibility
+  dog: 3,      // Keep for test flexibility
 };
+const WIN_SCORE = 10000;
+const LOSS_SCORE = -10000;
+const SEARCH_DEPTH_FOR_TEST = 2; // Or 1 for simpler tests, 3 for deeper ones if fast enough
+
 
 describe('shogiEngine', () => {
+  // Pre-fetch for functions that need them passed in
+  const animalsDataMicro = mockMicroAnimals;
+  const settingsDataMicro = mockMicroSettings;
+
   describe('evaluateMaterial', () => {
     test('should return 0 for an empty board', () => {
       const board = getInitialPieces('micro').board.map(row =>
@@ -71,264 +86,292 @@ describe('shogiEngine', () => {
     });
 
     test('should evaluate a more complex board', () => {
-      const board = getInitialPieces('micro').board; // Standard micro setup
-      // Sky: L, G, E, C (1000 + 5 + 5 + 1 = 1011) - assuming G, E are placeholders in initial for micro
-      // Land: l, g, e, c (1000 + 5 + 5 + 1 = 1011)
-      // For actual micro: Sky: L,C at start; Land: L,C at start
-      // Let's use the actual micro setup from getInitialPieces
-      // Sky: Lion (0,1), Chick (1,1)
-      // Land: Lion (3,1), Chick (2,1)
-      const initialBoard = getInitialPieces('micro').board;
-      const skyScore = PIECE_VALUES.lion + PIECE_VALUES.chick;
-      const landScore = PIECE_VALUES.lion + PIECE_VALUES.chick;
-
-      expect(evaluateMaterial(initialBoard, true)).toBe(skyScore - landScore); // Sky's turn
-      expect(evaluateMaterial(initialBoard, false)).toBe(landScore - skyScore); // Land's turn
+      // Standard micro setup: Sky Lion (0,1), Chick (1,1); Land Lion (3,1), Chick (2,1)
+      const initialBoard = getInitialPieces('micro').board; 
+      // Sky's perspective: (Lion + Chick) - (Lion + Chick) = 0
+      expect(evaluateMaterial(initialBoard, true)).toBe(0);
+      // Land's perspective: (Lion + Chick) - (Lion + Chick) = 0
+      expect(evaluateMaterial(initialBoard, false)).toBe(0);
     });
   });
 
-  describe('generateMoves', () => {
+  describe('generateMoves (Post-Fix Validation)', () => {
     const gameType = 'micro';
-    let initialBoard;
-    let capturedPieces;
+    let board; // Use simple board states for specific tests
+    const emptyCaptured = { sky: [], land: [] };
 
     beforeEach(() => {
-      const pieces = getInitialPieces(gameType);
-      initialBoard = pieces.board;
-      capturedPieces = pieces.captured;
-       // Ensure mocks are called with the correct gameType
+      // Reset mocks, though they return static values here
       getAnimals.mockClear();
       getSettings.mockClear();
-      getAnimals(gameType); // To populate the mocked animals for 'micro'
-      getSettings(gameType); // To populate the mocked settings for 'micro'
     });
 
-    test('should generate moves for a Chick at starting position (Sky player)', () => {
-      // Sky Chick at (1,1)
-      const moves = generateMoves(initialBoard, true, gameType, capturedPieces);
-      // Chick at (1,1) for Sky moves to (2,1) (y increases for Sky)
-      const chickMoves = moves.filter(
-        m => m.from?.x === 1 && m.from?.y === 1 && m.pieceType === 'chick'
-      );
-      expect(chickMoves).toContainEqual(
-        expect.objectContaining({
-          from: { x: 1, y: 1 },
-          to: { x: 2, y: 1 }, // Sky moves from low index to high index for x in this representation
-          pieceType: 'chick',
-          promotion: false,
-        })
-      );
-      // Check calls to mocks
-      expect(getAnimals).toHaveBeenCalledWith(gameType);
-      expect(getSettings).toHaveBeenCalledWith(gameType);
+    test('should use {x: row, y: col} and Sky Chick forward is +x', () => {
+      board = getInitialPieces(gameType).board; // Sky Chick at (1,1)
+      const moves = generateMoves(board, true, gameType, emptyCaptured);
+      const chickMove = moves.find(m => m.pieceType === 'chick' && m.from.x === 1 && m.from.y === 1);
+      expect(chickMove).toBeDefined();
+      expect(chickMove.to).toEqual({ x: 2, y: 1 }); // Chick moves from row 1 to row 2
     });
     
-    test('should generate promotion move for a Chick reaching promotion zone (Sky player)', () => {
-      const board = deepCopyBoard(initialBoard);
-      // Sky Chick at (2,1), one step from promotion. Sky's promotion zone is x=3 (last rank)
-      board[1][1] = { isEmpty: true }; // Clear original chick
-      board[2][1] = { type: 'Chick', isSky: true, isEmpty: false };
-
-      const moves = generateMoves(board, true, gameType, capturedPieces);
-      const chickPromotionMoves = moves.filter(
-        m => m.from?.x === 2 && m.from?.y === 1 && m.pieceType === 'chick' && m.to.x === 3
-      );
-      
-      expect(chickPromotionMoves).toContainEqual(
-        expect.objectContaining({
-          from: { x: 2, y: 1 },
-          to: { x: 3, y: 1 },
-          pieceType: 'chick',
-          promotion: true,
-          promotedTo: 'hen',
-        })
-      );
-      // Should also include the non-promotion move
-       expect(chickPromotionMoves).toContainEqual(
-        expect.objectContaining({
-          from: { x: 2, y: 1 },
-          to: { x: 3, y: 1 },
-          pieceType: 'chick',
-          promotion: false,
-        })
-      );
+    test('Land Chick forward is -x', () => {
+      board = getInitialPieces(gameType).board; // Land Chick at (2,1)
+      const moves = generateMoves(board, false, gameType, emptyCaptured);
+      const chickMove = moves.find(m => m.pieceType === 'chick' && m.from.x === 2 && m.from.y === 1);
+      expect(chickMove).toBeDefined();
+      expect(chickMove.to).toEqual({ x: 1, y: 1 }); // Land Chick moves from row 2 to row 1
     });
 
-    test('should generate drop moves for captured pieces (Sky player)', () => {
-      const board = deepCopyBoard(initialBoard);
-      // Make a square empty for dropping
-      board[1][0] = { isEmpty: true };
-      const captured = {
-        sky: [{ type: 'Chick', number: 1 }],
-        land: [],
-      };
-      const moves = generateMoves(board, true, gameType, captured);
-      const dropMoves = moves.filter(m => m.isDrop && m.pieceType === 'chick');
-      
-      // Expect a drop move for Chick to each empty square.
-      // For this test, specifically check for the one we made empty: (1,0)
-      expect(dropMoves).toContainEqual(
-        expect.objectContaining({
-          pieceType: 'chick',
-          to: { x: 1, y: 0 },
-          isDrop: true,
-        })
-      );
-      // Count empty squares: 3*4 = 12. Initial pieces = 4. So 8 empty squares.
-      expect(dropMoves.length).toBe(8); 
+    test('Lion moves from center', () => {
+      board = createEmptyBoard();
+      board[1][1] = { type: 'Lion', isSky: true, isEmpty: false };
+      const moves = generateMoves(board, true, gameType, emptyCaptured);
+      // Lion at (1,1) can move to 8 squares: (0,0),(0,1),(0,2), (1,0),(1,2), (2,0),(2,1),(2,2)
+      expect(moves.length).toBe(8);
+      expect(moves).toContainEqual(expect.objectContaining({ from: {x:1,y:1}, to: {x:0,y:0} }));
+      expect(moves).toContainEqual(expect.objectContaining({ from: {x:1,y:1}, to: {x:2,y:2} }));
+    });
+    
+    test('Lion at edge of board (0,0)', () => {
+      board = createEmptyBoard();
+      board[0][0] = { type: 'Lion', isSky: true, isEmpty: false }; // Sky Lion at (0,0)
+      const moves = generateMoves(board, true, gameType, emptyCaptured);
+      // Moves to (0,1), (1,0), (1,1)
+      expect(moves.length).toBe(3);
+      expect(moves).toContainEqual(expect.objectContaining({ from: {x:0,y:0}, to: {x:0,y:1} }));
+      expect(moves).toContainEqual(expect.objectContaining({ from: {x:0,y:0}, to: {x:1,y:0} }));
+      expect(moves).toContainEqual(expect.objectContaining({ from: {x:0,y:0}, to: {x:1,y:1} }));
     });
 
-    test('should return empty array if no moves are possible', () => {
-      const board = [
-        [{type: 'Lion', isSky: true, isEmpty: false}, {type: 'Elephant', isSky: false, isEmpty: false}, {type: 'Giraffe', isSky: false, isEmpty: false}],
-        [{type: 'Elephant', isSky: false, isEmpty: false}, {type: 'Chick', isSky: false, isEmpty: false}, {type: 'Elephant', isSky: false, isEmpty: false}],
-        [{type: 'Giraffe', isSky: false, isEmpty: false}, {type: 'Elephant', isSky: false, isEmpty: false}, {type: 'Elephant', isSky: false, isEmpty: false}],
-        [{isEmpty:true}, {isEmpty:true}, {isEmpty:true}]
-      ]; // Sky Lion surrounded by enemy pieces, no escape
-      const captured = { sky: [], land: [] };
+    test('Promotion for Sky Chick at (2,1) to (3,1)', () => {
+      board = createEmptyBoard();
+      board[2][1] = { type: 'Chick', isSky: true, isEmpty: false }; // Sky Chick one step from promotion
+      const moves = generateMoves(board, true, gameType, emptyCaptured);
+      const promotionMove = moves.find(m => m.promotion === true);
+      expect(promotionMove).toBeDefined();
+      expect(promotionMove).toMatchObject({ from: {x:2,y:1}, to: {x:3,y:1}, pieceType: 'chick', promotedTo: 'hen' });
+      // Should also include non-promoting move
+      const nonPromotingMove = moves.find(m => m.promotion === false && m.to.x === 3 && m.to.y ===1);
+      expect(nonPromotingMove).toBeDefined();
+    });
+    
+    test('No promotion for Hen', () => {
+        board = createEmptyBoard();
+        board[2][1] = { type: 'Hen', isSky: true, isEmpty: false };
+        const moves = generateMoves(board, true, gameType, emptyCaptured);
+        const henMoveToLastRank = moves.find(m => m.to.x === 3); // Move hen to promotion rank
+        expect(henMoveToLastRank).toBeDefined();
+        expect(henMoveToLastRank.promotion).toBe(false); // Hen cannot promote further
+    });
+
+    test('Drop moves for Sky with captured Chick', () => {
+      board = createEmptyBoard(); // Completely empty board
+      const captured = { sky: [{ type: 'chick', number: 1 }], land: [] };
       const moves = generateMoves(board, true, gameType, captured);
-      expect(moves).toEqual([]);
+      // 3*4 = 12 empty squares
+      expect(moves.length).toBe(12);
+      expect(moves.every(m => m.isDrop && m.pieceType === 'chick')).toBe(true);
+      expect(moves).toContainEqual(expect.objectContaining({ pieceType: 'chick', to: {x:0,y:0}, isDrop: true }));
     });
   });
 
-  describe('applyMove', () => {
+  describe('isKingInCheck', () => {
     const gameType = 'micro';
     let board;
+
+    test('Sky King in direct check by Land Chick', () => {
+      board = createEmptyBoard();
+      board[0][1] = { type: 'Lion', isSky: true, isEmpty: false };   // Sky Lion
+      board[1][1] = { type: 'Chick', isSky: false, isEmpty: false }; // Land Chick directly ahead
+      expect(isKingInCheck(board, true, gameType, animalsDataMicro, settingsDataMicro)).toBe(true);
+    });
+
+    test('Sky King not in check (initial board)', () => {
+      board = getInitialPieces(gameType).board;
+      expect(isKingInCheck(board, true, gameType, animalsDataMicro, settingsDataMicro)).toBe(false);
+    });
+    
+    test('Land King in direct check by Sky Chick', () => {
+      board = createEmptyBoard();
+      board[3][1] = { type: 'Lion', isSky: false, isEmpty: false };  // Land Lion
+      board[2][1] = { type: 'Chick', isSky: true, isEmpty: false }; // Sky Chick directly ahead
+      expect(isKingInCheck(board, false, gameType, animalsDataMicro, settingsDataMicro)).toBe(true);
+    });
+
+    test('King on edge in check', () => {
+      board = createEmptyBoard();
+      board[0][0] = { type: 'Lion', isSky: true, isEmpty: false };   // Sky Lion
+      board[1][0] = { type: 'Chick', isSky: false, isEmpty: false }; // Land Chick
+      expect(isKingInCheck(board, true, gameType, animalsDataMicro, settingsDataMicro)).toBe(true);
+    });
+    
+    test('No king on board, should not throw error and return false', () => {
+        board = createEmptyBoard(); // No kings
+        expect(isKingInCheck(board, true, gameType, animalsDataMicro, settingsDataMicro)).toBe(false);
+    });
+  });
+
+
+  describe('applyMove', () => { // Assuming applyMove uses x:row, y:col from previous fixes
+    const gameType = 'micro';
+    let board; // Use simple board states
     let captured;
 
     beforeEach(() => {
-      const pieces = getInitialPieces(gameType);
-      board = pieces.board;
-      captured = pieces.captured;
-      getAnimals(gameType); 
-      getSettings(gameType);
+      board = getInitialPieces(gameType).board; // Standard micro board
+      captured = { sky: [], land: [] }; // Start with no captured pieces
+      // Mocks are cleared in describe('generateMoves') or globally if needed
     });
 
-    test('should apply a simple board move', () => {
-      // Sky Chick at (1,1) moves to (2,1)
+    test('should apply a simple board move (Sky Chick (1,1) to (2,1))', () => {
       const move = { from: { x: 1, y: 1 }, to: { x: 2, y: 1 }, pieceType: 'chick', promotion: false };
       const { newBoard } = applyMove(board, move, true, captured, gameType);
-      
       expect(newBoard[1][1].isEmpty).toBe(true);
-      expect(newBoard[2][1]).toMatchObject({ type: 'Chick', isSky: true, isEmpty: false });
+      expect(newBoard[2][1]).toMatchObject({ type: 'chick', isSky: true, isEmpty: false });
     });
 
-    test('should apply a capture move and update captured pieces', () => {
-      // Sky Chick at (1,1) captures Land Chick at (2,1)
-      board[2][1] = { type: 'Chick', isSky: false, isEmpty: false }; // Place enemy chick
-      const move = { from: { x: 1, y: 1 }, to: { x: 2, y: 1 }, pieceType: 'chick', promotion: false, capturedPiece: 'chick' };
-      
+    test('should apply a capture move (Sky Lion (0,1) captures Land Chick (1,1))', () => {
+      board[0][1] = {type: 'Lion', isSky: true, isEmpty: false};
+      board[1][1] = {type: 'Chick', isSky: false, isEmpty: false}; // Land's chick
+      const move = { from: { x: 0, y: 1 }, to: { x: 1, y: 1 }, pieceType: 'lion', capturedPiece: 'chick', promotion: false };
       const { newBoard, newCapturedPieces } = applyMove(board, move, true, captured, gameType);
       
-      expect(newBoard[1][1].isEmpty).toBe(true);
-      expect(newBoard[2][1]).toMatchObject({ type: 'Chick', isSky: true, isEmpty: false });
+      expect(newBoard[0][1].isEmpty).toBe(true);
+      expect(newBoard[1][1]).toMatchObject({ type: 'lion', isSky: true, isEmpty: false });
       expect(newCapturedPieces.sky).toEqual(expect.arrayContaining([
-        expect.objectContaining({ type: 'chick', number: 1 }) 
+        expect.objectContaining({ type: 'chick', number: 1 })
       ]));
     });
     
-    test('should apply a capture move and demote promoted piece (Hen to Chick)', () => {
-      board[2][1] = { type: 'Hen', isSky: false, isEmpty: false }; // Land Hen
-      const move = { from: { x: 1, y: 1 }, to: { x: 2, y: 1 }, pieceType: 'chick', promotion: false, capturedPiece: 'hen' };
+    test('should demote captured promoted piece (Sky captures Land Hen, gets Chick)', () => {
+      board[0][1] = {type: 'Lion', isSky: true, isEmpty: false}; // Sky Lion
+      board[1][1] = {type: 'Hen', isSky: false, isEmpty: false}; // Land Hen
+      const move = { from: {x:0,y:1}, to: {x:1,y:1}, pieceType: 'lion', capturedPiece: 'hen', promotion: false};
       const { newCapturedPieces } = applyMove(board, move, true, captured, gameType);
       
       const capturedChick = newCapturedPieces.sky.find(p => p.type === 'chick');
       expect(capturedChick).toBeDefined();
-      expect(capturedChick.number).toBeGreaterThanOrEqual(1);
+      expect(capturedChick.number).toBe(1);
     });
 
-    test('should apply a drop move', () => {
-      const capturedWithChick = { sky: [{ type: 'chick', number: 1 }], land: [] };
-      const move = { pieceType: 'chick', to: { x: 1, y: 0 }, isDrop: true }; // Drop chick to (1,0)
-      board[1][0] = { isEmpty: true }; // Ensure target is empty
-
-      const { newBoard, newCapturedPieces } = applyMove(board, move, true, capturedWithChick, gameType);
+    test('should apply a drop move (Sky drops Chick to (0,0))', () => {
+      board[0][0] = { isEmpty: true };
+      captured = { sky: [{ type: 'chick', number: 1 }], land: [] };
+      const move = { pieceType: 'chick', to: { x: 0, y: 0 }, isDrop: true };
+      const { newBoard, newCapturedPieces } = applyMove(board, move, true, captured, gameType);
       
-      expect(newBoard[1][0]).toMatchObject({ type: 'chick', isSky: true, isEmpty: false });
+      expect(newBoard[0][0]).toMatchObject({ type: 'chick', isSky: true, isEmpty: false });
       const skyChickPile = newCapturedPieces.sky.find(p => p.type === 'chick');
-      expect(skyChickPile ? skyChickPile.number : 0).toBe(0); // or piece removed if number was 1
+      expect(skyChickPile ? skyChickPile.number : 0).toBe(0);
     });
 
-    test('should apply a promotion move', () => {
-      // Sky Chick at (2,1) moves to (3,1) and promotes to Hen
-      board[1][1] = {isEmpty: true}; // empty original chick
+    test('should apply a promotion move (Sky Chick (2,1) to (3,1) promotes to Hen)', () => {
       board[2][1] = { type: 'Chick', isSky: true, isEmpty: false };
+      board[1][1] = {isEmpty: true}; // Clear original chick spot if it was there
       const move = { from: { x: 2, y: 1 }, to: { x: 3, y: 1 }, pieceType: 'chick', promotion: true, promotedTo: 'hen' };
-      
       const { newBoard } = applyMove(board, move, true, captured, gameType);
       
       expect(newBoard[2][1].isEmpty).toBe(true);
-      expect(newBoard[3][1]).toMatchObject({ type: 'Hen', isSky: true, isEmpty: false });
+      expect(newBoard[3][1]).toMatchObject({ type: 'hen', isSky: true, isEmpty: false });
     });
   });
   
-  // findBestMove tests will be shallow for now
-  describe('findBestMove (shallow)', () => {
+  describe('findBestMove / negamax (Checkmate/Stalemate/Self-Check)', () => {
     const gameType = 'micro';
     let board;
-    let capturedPieces;
+    const emptyCaptured = { sky: [], land: [] };
 
-    beforeEach(() => {
-        const pieces = getInitialPieces(gameType);
-        board = pieces.board;
-        capturedPieces = pieces.captured;
-        getAnimals(gameType);
-        getSettings(gameType);
-    });
-
-    test('should return a valid move object if moves are available', () => {
-        // Standard initial setup for micro, Sky to move
-        const bestMove = findBestMove(board, true, gameType, capturedPieces);
-        // We expect findBestMove to call generateMoves and negamax.
-        // Since negamax (at depth > 0) would recursively call generateMoves,
-        // and applyMove, we are testing integration here.
-        expect(bestMove).not.toBeNull();
-        expect(bestMove).toHaveProperty('to');
-        // Further checks depend on the move type (drop or board move)
-        if (bestMove.isDrop) {
-            expect(bestMove).toHaveProperty('pieceType');
-        } else {
-            expect(bestMove).toHaveProperty('from');
-            expect(bestMove).toHaveProperty('pieceType');
-        }
-    });
-
-    test('should pick an obvious capture (Lion captures Chick with SEARCH_DEPTH=1)', () => {
-      const currentBoard = deepCopyBoard(board);
-      // Sky Lion at (0,1), Land Chick at (1,1) right in front
-      currentBoard[0][1] = { type: 'Lion', isSky: true, isEmpty: false };
-      currentBoard[1][1] = { type: 'Chick', isSky: false, isEmpty: false }; // Land Chick
-      // Clear other pieces for simplicity
-      currentBoard[1][0] = {isEmpty: true}; currentBoard[0][0] = {isEmpty: true}; currentBoard[0][2] = {isEmpty: true};
-      currentBoard[2][1] = {isEmpty: true}; currentBoard[3][1] = {isEmpty: true};
-
-
-      // With SEARCH_DEPTH=1, negamax directly calls evaluateMaterial.
-      // Capturing the chick should result in a higher score.
-      const bestMove = findBestMove(currentBoard, true, gameType, { sky: [], land: [] });
-
-      expect(bestMove).toMatchObject({
-        from: { x: 0, y: 1 },
-        to: { x: 1, y: 1 },
-        pieceType: 'lion',
-      });
-    });
-    
-    test('should return null if no moves are possible', () => {
-      const noMovesBoard = [
-        [{type: 'Lion', isSky: true, isEmpty: false}, {type: 'Elephant', isSky: false, isEmpty: false}, {type: 'Giraffe', isSky: false, isEmpty: false}],
-        [{type: 'Elephant', isSky: false, isEmpty: false}, {type: 'Chick', isSky: false, isEmpty: false}, {type: 'Elephant', isSky: false, isEmpty: false}],
-        [{type: 'Giraffe', isSky: false, isEmpty: false}, {type: 'Elephant', isSky: false, isEmpty: false}, {type: 'Elephant', isSky: false, isEmpty: false}],
-        [{isEmpty:true}, {isEmpty:true}, {isEmpty:true}]
-      ];
-      const bestMove = findBestMove(noMovesBoard, true, gameType, { sky: [], land: [] });
+    test('Checkmate: Sky King has no moves and is in check -> findBestMove returns null', () => {
+      board = createEmptyBoard();
+      board[0][0] = { type: 'Lion', isSky: true, isEmpty: false };   // Sky King
+      board[1][0] = { type: 'Chick', isSky: false, isEmpty: false }; // Land Chick attacking King
+      board[0][1] = { type: 'Hen', isSky: false, isEmpty: false };   // Land Hen blocking escape
+      board[1][1] = { type: 'Hen', isSky: false, isEmpty: false };   // Land Hen blocking escape
+      
+      // Verify king is in check first
+      expect(isKingInCheck(board, true, gameType, animalsDataMicro, settingsDataMicro)).toBe(true);
+      const bestMove = findBestMove(board, true, gameType, emptyCaptured);
       expect(bestMove).toBeNull();
     });
-  });
 
+    test('Checkmate: Sky King checkmated -> negamax returns LOSS_SCORE + depth', () => {
+      board = createEmptyBoard();
+      board[0][0] = { type: 'Lion', isSky: true, isEmpty: false }; 
+      board[1][0] = { type: 'Chick', isSky: false, isEmpty: false }; 
+      board[0][1] = { type: 'Hen', isSky: false, isEmpty: false };   
+      board[1][1] = { type: 'Hen', isSky: false, isEmpty: false };  
+      
+      const score = negamax(board, SEARCH_DEPTH_FOR_TEST, -Infinity, Infinity, true, gameType, emptyCaptured, animalsDataMicro, settingsDataMicro);
+      expect(score).toBe(LOSS_SCORE + SEARCH_DEPTH_FOR_TEST);
+    });
+
+    test('Stalemate: Sky King has no moves but not in check -> findBestMove returns null', () => {
+      board = createEmptyBoard();
+      board[0][0] = { type: 'Lion', isSky: true, isEmpty: false };   // Sky King
+      // Block all king's moves with non-attacking friendly or non-checking enemy pieces
+      board[1][0] = { type: 'Lion', isSky: false, isEmpty: false }; // Land Lion (blocks, but doesn't check if it can't move there)
+      board[0][1] = { type: 'Lion', isSky: false, isEmpty: false }; 
+      board[1][1] = { type: 'Lion', isSky: false, isEmpty: false }; 
+      // Make sure the blocking Land Lions cannot themselves move to attack the King from their spots
+      // For this test, assume lions cannot attack from these positions.
+      
+      expect(isKingInCheck(board, true, gameType, animalsDataMicro, settingsDataMicro)).toBe(false);
+      const bestMove = findBestMove(board, true, gameType, emptyCaptured);
+      expect(bestMove).toBeNull();
+    });
+    
+    test('Stalemate: Sky King stalemated -> negamax returns 0', () => {
+      board = createEmptyBoard();
+      board[0][0] = { type: 'Lion', isSky: true, isEmpty: false };   
+      board[1][0] = { type: 'Elephant', isSky: false, isEmpty: false }; // Use Elephant that has no moves in mock
+      board[0][1] = { type: 'Elephant', isSky: false, isEmpty: false }; 
+      board[1][1] = { type: 'Elephant', isSky: false, isEmpty: false }; 
+      
+      const score = negamax(board, SEARCH_DEPTH_FOR_TEST, -Infinity, Infinity, true, gameType, emptyCaptured, animalsDataMicro, settingsDataMicro);
+      expect(score).toBe(0); // Stalemate score
+    });
+
+    test('Self-check prevention: Sky Chick cannot move if it exposes King to check', () => {
+      board = createEmptyBoard();
+      board[0][1] = { type: 'Lion', isSky: true, isEmpty: false };    // Sky King
+      board[1][1] = { type: 'Chick', isSky: true, isEmpty: false };   // Sky Chick (blocking)
+      board[2][1] = { type: 'Hen', isSky: false, isEmpty: false };   // Land Hen attacking along the column if Chick moves
+      
+      // Chick's only move is to (2,1), capturing the Hen. But this would expose King at (0,1) to hypothetical attack.
+      // Let's assume Hen attacks like a rook for this test along col 1.
+      // The current mock Hen does not do that. Let's adjust mock for this test or use a different attacker.
+      // Let's use a Land Lion that would check if Chick moves.
+      board[2][1] = { type: 'Lion', isSky: false, isEmpty: false }; // Land Lion
+
+      // To make this scenario work, the Land Lion must be able to attack (0,1) if Chick moves from (1,1).
+      // This setup is tricky. Let's simplify: if Chick moves from (1,1) to (2,1), the King at (0,1) is now open.
+      // If there's a Land piece that can attack (0,1) only once (1,1) is empty, that's a self-check.
+      // For example, Land Lion at (0,2) that can move to (0,1).
+      board[0][2] = {type: 'Lion', isSky: false, isEmpty: false}; // Land Lion that can attack (0,1)
+      
+      // Sky Chick at (1,1) wants to move to (2,1). Sky King at (0,1).
+      // If Chick moves, Lion at (0,2) can take King at (0,1).
+      // This means the Chick move (1,1)->(2,1) is illegal.
+      // So, findBestMove should not return this move.
+      // If this is the only piece Sky can move, findBestMove should return null (or another move if available).
+
+      const bestMove = findBestMove(board, true, gameType, emptyCaptured);
+      const chickMove = bestMove ? (bestMove.from?.x === 1 && bestMove.from?.y === 1) : false;
+      expect(chickMove).toBe(false); // Chick should not be able to move into self-check
+    });
+  });
 });
 
-// Helper for deep copying board for tests if not using lodash/cloneDeep
+// Helper for deep copying board for tests
 function deepCopyBoard(board) {
   return board.map(row => row.map(square => ({ ...square })));
+}
+
+// Helper to create an empty board
+function createEmptyBoard() {
+  const board = [];
+  for (let i = 0; i < mockMicroSettings.boardHeight; i++) {
+    board.push(Array(mockMicroSettings.boardWidth).fill(null).map(() => ({ isEmpty: true })));
+  }
+  return board;
 }

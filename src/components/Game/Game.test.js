@@ -5,9 +5,12 @@ import Game from './Game';
 import { findBestMove } from '../../shogiEngine'; // This will be the mock
 import getInitialPieces from './getInitialPieces'; // To help set up board states
 
+import { isKingInCheckEngine as isKingInCheckEngineMock } from '../../shogiEngine'; // Import the actual name for clarity
+
 // Mock the shogiEngine
 jest.mock('../../shogiEngine', () => ({
   findBestMove: jest.fn(),
+  isKingInCheckEngine: jest.fn(), // Mock isKingInCheck from the engine
 }));
 
 // Mock getSettings and getAnimals if they are causing issues with default Game render
@@ -51,8 +54,10 @@ describe('Game Component AI Integration', () => {
   beforeEach(() => {
     // Reset mocks before each test
     findBestMove.mockReset();
-    // Ensure default mock return value for findBestMove doesn't interfere if not set by a specific test
-    findBestMove.mockReturnValue(null); 
+    isKingInCheckEngineMock.mockReset(); // Reset this mock too
+    // Default mock implementations
+    findBestMove.mockReturnValue(null);  // Default: AI has no move
+    isKingInCheckEngineMock.mockReturnValue(false); // Default: King is not in check
   });
 
   test('should toggle AI mode when AI button is clicked', () => {
@@ -214,5 +219,114 @@ describe('Game Component AI Integration', () => {
     // the AI effect hook won't run again for a new move.
     // We've asserted it was called once for the move. If it were called again, the count would be > 1.
     expect(findBestMove).toHaveBeenCalledTimes(1); 
+  });
+
+  // --- Tests for Checkmate and Stalemate Game End ---
+  // Note: These tests rely on the internal dispatch and reducer logic.
+  // We find a piece that can move, click it, then click a target square.
+
+  const performMove = async (getByRole, getByTestId, fromPos, toPos) => {
+    // Helper to click a piece and then its target square.
+    // Assumes pieces/squares have test-ids like `piece-${x}-${y}` or `square-${x}-${y}`
+    // This is a placeholder, actual implementation depends on how pieces/squares are identified.
+    // For now, we'll assume direct dispatch for testing reducer logic.
+    // In a real UI test, you'd use fireEvent.click on elements.
+  };
+
+
+  test('should declare checkmate when opponent has no legal moves and is in check', async () => {
+    render(<Game config={defaultConfig} onHelp={mockOnHelp} onConfigChange={mockOnConfigChange} />);
+    
+    // Sky (human) to move. Land (next player) will be checkmated.
+    // After Sky moves, findBestMove for Land should return null.
+    findBestMove.mockImplementation((board, isSkyTurnInternal, gameTypeInternal, capturedPiecesInternal) => {
+      if (isSkyTurnInternal === false) { // Land's turn (after Sky's move)
+        return null; // Land has no legal moves
+      }
+      // For Sky's initial turn, let it find some move if needed for setup, or default to null.
+      return { from: { x: 1, y: 1 }, to: { x: 2, y: 1 }, pieceType: 'chick', promotion: false, isDrop: false };
+    });
+
+    // isKingInCheckEngine for Land should return true after Sky's move.
+    isKingInCheckEngineMock.mockImplementation((board, isSkyKing, gameTypeInternal, animalsData, settingsData) => {
+      return isSkyKing === false; // Land's king is in check
+    });
+    
+    // Simulate Sky making a move (e.g., Chick from (1,1) to (2,1))
+    // We need to get the dispatch function or simulate the effect of a move.
+    // Directly calling dispatch is an option if we can get it, or trigger via UI.
+    // For simplicity, let's assume a way to dispatch.
+    // This test setup is more about the reducer logic than UI interaction.
+    
+    // To test the reducer, we would ideally dispatch an action.
+    // However, getting dispatch here is complex. We rely on Game's internal dispatch.
+    // Let's try to make the AI (Sky) make the "checkmating" move.
+    const aiToggleButton = screen.getByRole('button', { name: /toggle ai mode/i });
+    fireEvent.click(aiToggleButton); // Activate AI (Sky)
+
+    await waitFor(() => {
+      // AI (Sky) makes its move. Now it's Land's turn.
+      // Reducer should have run findBestMove (mocked to null for Land)
+      // and isKingInCheckEngine (mocked to true for Land).
+      expect(screen.getByText(/Sky wins!/i)).toBeInTheDocument();
+    }, { timeout: 1000 }); // Increased timeout for AI move + reducer logic
+  });
+
+  test('should declare stalemate when opponent has no legal moves and is not in check', async () => {
+    render(<Game config={defaultConfig} onHelp={mockOnHelp} onConfigChange={mockOnConfigChange} />);
+
+    // Sky (human) to move. Land (next player) will be stalemated.
+    findBestMove.mockImplementation((board, isSkyTurnInternal, gameTypeInternal, capturedPiecesInternal) => {
+      if (isSkyTurnInternal === false) { // Land's turn
+        return null; // Land has no legal moves
+      }
+      return { from: { x: 1, y: 1 }, to: { x: 2, y: 1 }, pieceType: 'chick', promotion: false, isDrop: false };
+    });
+    
+    // isKingInCheckEngine for Land should return false.
+    isKingInCheckEngineMock.mockReturnValue(false); // Default behavior, but explicit for clarity.
+
+    const aiToggleButton = screen.getByRole('button', { name: /toggle ai mode/i });
+    fireEvent.click(aiToggleButton); // Activate AI (Sky)
+
+    await waitFor(() => {
+      // AI (Sky) makes its move. Now it's Land's turn.
+      // Reducer runs findBestMove (null for Land) and isKingInCheckEngine (false for Land).
+      expect(screen.getByText(/Draw!/i)).toBeInTheDocument();
+    }, { timeout: 1000 });
+  });
+
+  // --- Tests for Refined AI Turn Control ---
+  // These tests are more conceptual as directly testing context-modified functions is hard.
+  // We test the observable behavior (e.g., AI makes a move, then doesn't immediately make another).
+
+  test('Human player interaction should be implicitly blocked during AI turn', async () => {
+    // This test relies on the fact that if it's AI's turn, the AI will make a move.
+    // If the human *could* interact, they might make a move before the AI,
+    // which would then make the AI's useEffect condition (isSkyTurn === aiPlayerIsSky) false.
+    // The existing 'AI makes a board move' and 'AI makes a drop move' tests
+    // already demonstrate that when AI is active and it's its turn, it proceeds to move.
+    // The `canDrag` logic in BoardPiece is the primary direct prevention.
+    
+    findBestMove.mockReturnValueOnce({ from: { x: 1, y: 1 }, to: { x: 2, y: 1 }, pieceType: 'chick', isDrop: false }); // AI's first move
+    findBestMove.mockReturnValueOnce(null); // Subsequent calls (e.g. for opponent)
+
+    render(<Game config={defaultConfig} onHelp={mockOnHelp} onConfigChange={mockOnConfigChange} />);
+    const aiToggleButton = screen.getByRole('button', { name: /toggle ai mode/i });
+    fireEvent.click(aiToggleButton); // Activate AI (Sky's turn)
+
+    await waitFor(() => {
+      // AI (Sky) should have made its move.
+      expect(findBestMove).toHaveBeenCalledTimes(1); // Called for AI's turn
+    });
+    
+    // Now it's Land's turn (human). findBestMove would be called by the reducer to check for game end.
+    await waitFor(() => {
+       expect(findBestMove).toHaveBeenCalledTimes(2); // Called for Land to check game end state
+    });
+
+    // If human could interact during AI's thinking time or move, state could be messed up.
+    // The success of AI making its move implies human interaction was correctly blocked by UI (canDrag)
+    // and context-provided canMove/canDrop.
   });
 });

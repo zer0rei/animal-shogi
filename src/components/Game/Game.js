@@ -13,7 +13,7 @@ import {
 import getSettings from "./getSettings";
 import getAnimals, { getPromoted, getDemoted, isPromoted } from "./getAnimals";
 import getInitialPieces from "./getInitialPieces";
-import { findBestMove } from "../../shogiEngine.js"; // AI Engine
+import { findBestMove, isKingInCheck as isKingInCheckEngine } from "../../shogiEngine.js"; // AI Engine
 import styles from "./Game.module.css";
 
 
@@ -96,7 +96,8 @@ const validateDestination = (board, from, to, move) => {
   return true;
 };
 
-const canMove = (gameType, pieces) => (from, to) => {
+// Renamed to baseCanMove to avoid conflict with the context value
+const baseCanMove = (gameType, pieces) => (from, to) => {
   const animals = getAnimals(gameType);
   const piece = pieces.board[from.x][from.y];
   const { moves } = animals[piece.type];
@@ -108,7 +109,8 @@ const canMove = (gameType, pieces) => (from, to) => {
   return false;
 };
 
-const canDrop = (gameType, pieces) => (isSky, fromIndex, to) => {
+// Renamed to baseCanDrop to avoid conflict with the context value
+const baseCanDrop = (gameType, pieces) => (isSky, fromIndex, to) => {
   if (!pieces.board[to.x][to.y].isEmpty) {
     return false;
   }
@@ -269,8 +271,10 @@ const piecesReducer = (gameType) => (state, action) => {
         // Four-move repetition check (Sennichite)
         // Should be checked only if the game hasn't already ended by capture or king entering
         let finalMoveHistory = state.moveHistory || [];
-        if (!result.didEnd) {
-          const currentStateKey = JSON.stringify(newPieces.board) + (!state.isSkyTurn).toString();
+        let nextPlayerIsSkyTurn = !state.isSkyTurn;
+
+        if (!result.didEnd) { // Only check repetition if game not already ended by other means
+          const currentStateKey = JSON.stringify(newPieces.board) + nextPlayerIsSkyTurn.toString();
           finalMoveHistory = [...(state.moveHistory || []), currentStateKey];
           
           let repetitionCount = 0;
@@ -283,14 +287,35 @@ const piecesReducer = (gameType) => (state, action) => {
           if (repetitionCount >= 4) {
             result.didEnd = true;
             result.didWin = false; 
-            result.isDraw = true;
+            result.isDraw = true; // Sennichite - draw
+          }
+        }
+
+        // Check for Checkmate/Stalemate for the NEXT player, only if game not ended by other rules
+        if (!result.didEnd) {
+          const animalsData = getAnimals(gameType);
+          const settingsData = getSettings(gameType);
+          const noLegalMovesForNextPlayer = findBestMove(newPieces.board, nextPlayerIsSkyTurn, gameType, newPieces.captured) === null;
+
+          if (noLegalMovesForNextPlayer) {
+            result.didEnd = true;
+            if (isKingInCheckEngine(newPieces.board, nextPlayerIsSkyTurn, gameType, animalsData, settingsData)) {
+              // Checkmate: current player (state.isSkyTurn) wins
+              result.didWin = true;
+              result.didSkyWin = state.isSkyTurn;
+              result.isDraw = false;
+            } else {
+              // Stalemate
+              result.didWin = false;
+              result.isDraw = true;
+            }
           }
         }
         
         return {
           ...state,
           pieces: newPieces,
-          isSkyTurn: !state.isSkyTurn,
+          isSkyTurn: nextPlayerIsSkyTurn,
           result,
           moveHistory: finalMoveHistory, 
         };
@@ -330,14 +355,16 @@ const piecesReducer = (gameType) => (state, action) => {
         });
 
         // Uchifu-dzume (Pawn drop checkmate) simplified: disallow chick drop causing check
+        // The existing isSquareAttacked check attempts to prevent illegal chick drops.
+        // If a chick drop is illegal due to Uchifu-dzume, this should prevent the state change.
         if (gameType !== "micro") {
           if (pieceToDrop.type === "chick") {
             let opponentsLionPosition = null;
             const { numRows, numCols } = getSettings(gameType);
-            for (let r = 0; r < numRows; r++) {
-              for (let c = 0; c < numCols; c++) {
-                if (newBoard[r][c].type === "lion" && newBoard[r][c].isSky === !isSky) {
-                  opponentsLionPosition = { x: r, y: c };
+            for (let r_idx = 0; r_idx < numRows; r_idx++) {
+              for (let c_idx = 0; c_idx < numCols; c_idx++) {
+                if (newBoard[r_idx][c_idx].type === "lion" && newBoard[r_idx][c_idx].isSky === !isSky) {
+                  opponentsLionPosition = { x: r_idx, y: c_idx };
                   break;
                 }
               }
@@ -346,17 +373,60 @@ const piecesReducer = (gameType) => (state, action) => {
 
             if (opponentsLionPosition) {
               if (isSquareAttacked(gameType, newBoard, opponentsLionPosition, !isSky)) {
-                // If dropping a chick results in a check to the opponent's Lion, it's disallowed.
-                return state;
+                // This drop is potentially Uchifu-dzume (illegal move)
+                return state; 
               }
             }
           }
+        }
+
+        const result = { ...state.result }; // Start with current result state
+        let nextPlayerIsSkyTurn = !state.isSkyTurn;
+        let finalMoveHistory = state.moveHistory || [];
+
+        // Four-move repetition check (Sennichite)
+        if (!result.didEnd) {
+          const currentStateKey = JSON.stringify(newBoard) + nextPlayerIsSkyTurn.toString();
+          finalMoveHistory = [...(state.moveHistory || []), currentStateKey];
+          let repetitionCount = 0;
+          for (const historyKey of finalMoveHistory) {
+            if (historyKey === currentStateKey) repetitionCount++;
+          }
+          if (repetitionCount >= 4) {
+            result.didEnd = true;
+            result.didWin = false;
+            result.isDraw = true; // Sennichite - draw
+          }
+        }
+        
+        // Check for Checkmate/Stalemate for the NEXT player, only if game not ended by other rules
+        if (!result.didEnd) {
+            const animalsData = getAnimals(gameType);
+            const settingsData = getSettings(gameType);
+            // Note: using newCaptured (which is the new state of captured pieces after the drop)
+            const noLegalMovesForNextPlayer = findBestMove(newBoard, nextPlayerIsSkyTurn, gameType, newCaptured) === null;
+
+            if (noLegalMovesForNextPlayer) {
+                result.didEnd = true;
+                if (isKingInCheckEngine(newBoard, nextPlayerIsSkyTurn, gameType, animalsData, settingsData)) {
+                    // Checkmate: current player (state.isSkyTurn who made the drop) wins
+                    result.didWin = true;
+                    result.didSkyWin = state.isSkyTurn; 
+                    result.isDraw = false;
+                } else {
+                    // Stalemate
+                    result.didWin = false;
+                    result.isDraw = true;
+                }
+            }
         }
         
         return {
           ...state,
           pieces: { board: newBoard, captured: newCaptured },
-          isSkyTurn: !state.isSkyTurn,
+          isSkyTurn: nextPlayerIsSkyTurn,
+          result, // Contains updated didEnd, didWin, etc.
+          moveHistory: finalMoveHistory,
         };
       }
       return state;
@@ -476,8 +546,9 @@ function Game({ config, onHelp, onConfigChange }) {
     setResultClosed(false);
     // setAiModeActive(false); // Optionally reset AI mode on game reset
   };
-  const move = (from, to) => dispatch({ type: "move", payload: { from, to } });
-  const drop = (isSky, from, to) =>
+  // Renamed dispatch actions to avoid conflict if original canMove/canDrop were component methods
+  const dispatchMove = (from, to) => dispatch({ type: "move", payload: { from, to } });
+  const dispatchDrop = (isSky, from, to) =>
     dispatch({ type: "drop", payload: { isSky, fromIndex: from, to } });
 
   const toggleAiMode = () => {
@@ -490,15 +561,31 @@ function Game({ config, onHelp, onConfigChange }) {
   const nextGameTypeLabel = nextGameType === "micro" ? "S" : "M";
   const nextGameTypeAria = nextGameType === "micro" ? "Switch to 3x4 game" : "Switch to 5x6 game";
 
+  const isPlayerTurnBlocked = aiModeActive && isSkyTurn === aiPlayerIsSky;
+
+  // Wrapped canMove and canDrop for context
+  const currentCanMove = (from, to) => {
+    if (isPlayerTurnBlocked) return false;
+    return baseCanMove(gameType, pieces)(from, to);
+  };
+
+  const currentCanDrop = (isSky, fromIndex, to) => {
+    if (isPlayerTurnBlocked) return false;
+    // Prevent human from dropping AI's pieces even if some logic error made it seem possible
+    // This checks if the human is trying to drop a piece for the side the AI controls.
+    if (aiModeActive && isSky === aiPlayerIsSky) return false; 
+    return baseCanDrop(gameType, pieces)(isSky, fromIndex, to);
+  };
+
   return (
     <AnimalsContext.Provider value={animals}>
-      <GameStateContext.Provider value={{ pieces, isSkyTurn, result }}>
+      <GameStateContext.Provider value={{ pieces, isSkyTurn, result, aiModeActive, aiPlayerIsSky }}>
         <GameDispatchContext.Provider
           value={{
-            canMove: canMove(gameType, pieces),
-            move,
-            canDrop: canDrop(gameType, pieces),
-            drop,
+            canMove: currentCanMove,
+            move: dispatchMove,
+            canDrop: currentCanDrop,
+            drop: dispatchDrop,
           }}
         >
           <Board
