@@ -200,46 +200,22 @@ const piecesReducer = (gameType) => (state, action) => {
         });
         // promotion
         if (!isPromoted(fromSquare.type)) {
-          if (gameType !== "micro") {
-            const promotionZoneStartSky = numRows - 2;
-            const forcedPromotionRowSky = numRows - 1;
-            const promotionZoneStartLand = 1;
-            const forcedPromotionRowLand = 0;
-
-            if (fromSquare.isSky) {
-              if (to.x >= promotionZoneStartSky) { // Entered or is within promotion zone
-                if ((fromSquare.type === "chick" || fromSquare.type === "cat") && to.x === forcedPromotionRowSky) {
-                  shouldPromote = to;
-                } else if (fromSquare.type === "chick" || fromSquare.type === "cat") {
-                  canPromote = to;
-                }
-              }
-            } else {
-              if (to.x <= promotionZoneStartLand) { // Entered or is within promotion zone
-                if ((fromSquare.type === "chick" || fromSquare.type === "cat") && to.x === forcedPromotionRowLand) {
-                  shouldPromote = to;
-                } else if (fromSquare.type === "chick" || fromSquare.type === "cat") {
-                  canPromote = to;
-                }
+          const numRowsInSky = Math.floor(numRows / 3);
+          const numPromotionRows = gameType === "micro" ? 1 : 2;
+          if (fromSquare.isSky) {
+            if (from.x >= numRows - numRowsInSky || to.x >= numRows - numRowsInSky) {
+              if (["chick", "cat"].includes(fromSquare.type) && to.x >= numRows - numPromotionRows) {
+                shouldPromote = to;
+              } else if (["chick", "cat"].includes(fromSquare.type)) { 
+                canPromote = to;
               }
             }
           } else { 
-            const numRowsInSky = Math.floor(numRows / 3);
-            if (fromSquare.isSky) {
-              if (from.x >= numRows - numRowsInSky || to.x >= numRows - numRowsInSky) {
-                if (fromSquare.type === "chick" && to.x === numRows - 1) {
-                  shouldPromote = to;
-                } else if (fromSquare.type === "chick") { 
-                  canPromote = to;
-                }
-              }
-            } else { 
-              if (from.x < numRowsInSky || to.x < numRowsInSky) {
-                if (fromSquare.type === "chick" && to.x === 0) {
-                  shouldPromote = to;
-                } else if (fromSquare.type === "chick") { 
-                  canPromote = to;
-                }
+            if (from.x < numRowsInSky || to.x < numRowsInSky) {
+              if (["chick", "cat"].includes(fromSquare.type) && to.x < numPromotionRows) {
+                shouldPromote = to;
+              } else if (["chick", "cat"].includes(fromSquare.type)) { 
+                canPromote = to;
               }
             }
           }
