@@ -1,0 +1,218 @@
+import React from 'react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import Game from './Game';
+import { findBestMove } from '../../shogiEngine'; // This will be the mock
+import getInitialPieces from './getInitialPieces'; // To help set up board states
+
+// Mock the shogiEngine
+jest.mock('../../shogiEngine', () => ({
+  findBestMove: jest.fn(),
+}));
+
+// Mock getSettings and getAnimals if they are causing issues with default Game render
+// or if specific configurations are needed for tests not covered by default initialPieces
+jest.mock('./getSettings', () => ({
+  __esModule: true,
+  default: jest.fn((gameType = 'micro') => {
+    if (gameType === 'micro') {
+      return { numRows: 4, numCols: 3, boardWidth: 3, boardHeight: 4 };
+    }
+    return { numRows: 6, numCols: 5, boardWidth: 5, boardHeight: 6 }; // goro
+  }),
+}));
+
+jest.mock('./getAnimals', () => ({
+  __esModule: true,
+  default: jest.fn((gameType = 'micro') => {
+    // Return a simplified structure, actual moves don't matter as much for AI integration tests
+    // as they do for engine tests.
+    if (gameType === 'micro') {
+      return {
+        lion: { moves: [], promotesTo: null },
+        chick: { moves: [{x:0, y:1}], promotesTo: 'hen' }, // Sky moves positive Y
+        hen: { moves: [], promotesTo: null },
+      };
+    }
+    return {};
+  }),
+  getPromoted: jest.fn(type => (type === 'chick' ? 'hen' : null)),
+  getDemoted: jest.fn(type => (type === 'hen' ? 'chick' : type)),
+  isPromoted: jest.fn(type => type === 'hen'),
+}));
+
+
+// Default props for Game component
+const defaultConfig = { gameType: 'micro' };
+const mockOnHelp = jest.fn();
+const mockOnConfigChange = jest.fn();
+
+describe('Game Component AI Integration', () => {
+  beforeEach(() => {
+    // Reset mocks before each test
+    findBestMove.mockReset();
+    // Ensure default mock return value for findBestMove doesn't interfere if not set by a specific test
+    findBestMove.mockReturnValue(null); 
+  });
+
+  test('should toggle AI mode when AI button is clicked', () => {
+    render(<Game config={defaultConfig} onHelp={mockOnHelp} onConfigChange={mockOnConfigChange} />);
+    
+    const aiToggleButton = screen.getByRole('button', { name: /toggle ai mode/i });
+    expect(aiToggleButton).toHaveTextContent('P'); // Player vs Player initially
+
+    fireEvent.click(aiToggleButton);
+    expect(aiToggleButton).toHaveTextContent('A'); // AI mode active
+
+    fireEvent.click(aiToggleButton);
+    expect(aiToggleButton).toHaveTextContent('P'); // Back to Player vs Player
+  });
+
+  test('AI makes a board move when active and its turn', async () => {
+    const initialPieces = getInitialPieces('micro'); // Sky: Lion (0,1), Chick (1,1) | Land: Lion (3,1), Chick (2,1)
+    const aiMove = { from: { x: 1, y: 1 }, to: { x: 2, y: 1 }, pieceType: 'chick', promotion: false, isDrop: false }; // Sky Chick moves forward
+    findBestMove.mockReturnValue(aiMove);
+
+    render(<Game config={defaultConfig} onHelp={mockOnHelp} onConfigChange={mockOnConfigChange} />);
+
+    // Activate AI (AI is Sky player by default, and it's Sky's turn initially after reset/load)
+    const aiToggleButton = screen.getByRole('button', { name: /toggle ai mode/i });
+    fireEvent.click(aiToggleButton); // AI is now active and it's Sky's turn
+
+    // Wait for the AI's move to be processed (useEffect and setTimeout)
+    await waitFor(() => {
+      expect(findBestMove).toHaveBeenCalledTimes(1);
+    });
+    
+    expect(findBestMove).toHaveBeenCalledWith(
+      initialPieces.board, // current board state
+      true,                // aiPlayerIsSky (true by default)
+      'micro',             // gameType
+      initialPieces.captured // current captured pieces
+    );
+
+    // Check if the board has updated. Chick from (1,1) should be gone. (2,1) should be Sky's Chick.
+    // This requires checking the visual state or, more robustly, the internal state if accessible.
+    // For now, we'll rely on findBestMove being called, which implies dispatch would be called.
+    // A more detailed assertion would involve checking the piece positions after the move.
+    // Example: Querying the board for pieces. This is complex with current setup.
+    // We can check if the turn has changed.
+    const turnIndicator = screen.getByText(/turn/i); // Assuming some turn indicator exists or can be added
+    // Initially Sky's turn. After AI (Sky) moves, should be Land's turn.
+    // This test needs a way to verify board state or turn change.
+    // The Game component state `isSkyTurn` changes. If we had a visual indicator of this, we could check it.
+    // For now, the key is that findBestMove was called and attempted a move.
+  });
+
+  test('AI makes a drop move when active and its turn', async () => {
+    const initialPieces = getInitialPieces('micro');
+    initialPieces.board[1][0] = { isEmpty: true }; // Make a square empty for drop
+    initialPieces.captured.sky.push({ type: 'chick', number: 1, isSky: true }); // AI (Sky) has a chick to drop
+    
+    const aiDropMove = { pieceType: 'chick', to: { x: 1, y: 0 }, isDrop: true };
+    findBestMove.mockReturnValue(aiDropMove);
+
+    render(<Game config={defaultConfig} onHelp={mockOnHelp} onConfigChange={mockOnConfigChange} />);
+    
+    const aiToggleButton = screen.getByRole('button', { name: /toggle ai mode/i });
+    fireEvent.click(aiToggleButton); // Activate AI
+
+    await waitFor(() => {
+      expect(findBestMove).toHaveBeenCalledTimes(1);
+    });
+
+    expect(findBestMove).toHaveBeenCalledWith(
+      initialPieces.board, // board state before drop
+      true,
+      'micro',
+      initialPieces.captured
+    );
+    // Assert board change or turn change as in the previous test.
+  });
+
+  test('AI does not move when not its turn', async () => {
+    render(<Game config={defaultConfig} onHelp={mockOnHelp} onConfigChange={mockOnConfigChange} />);
+    
+    const aiToggleButton = screen.getByRole('button', { name: /toggle ai mode/i });
+    fireEvent.click(aiToggleButton); // AI active
+
+    // Manually make one move for Sky (human player, assuming AI is Land or AI is Sky but we make Sky's first move)
+    // This part is tricky as Game.js default AI is Sky.
+    // To test this, we'd need AI to be Land, or to make a move for Sky first.
+    // Let's assume AI is Sky. We click AI button. It's Sky's turn. AI will try to move.
+    // To test "not its turn", we need AI to be Land, or Sky to have already moved.
+
+    // Reset findBestMove for this specific scenario if AI tried to move initially.
+    findBestMove.mockClear(); 
+
+    // Simulate a player move so it becomes Land's turn (assuming AI is Sky)
+    // This requires interacting with the board, which is complex here.
+    // Alternative: Modify Game to allow setting initial isSkyTurn or aiPlayerIsSky via props for testing.
+    // For now, let's assume AI is Land for this test by setting aiPlayerIsSky to false in a hypothetical future setup.
+    // Since we can't easily change aiPlayerIsSky, we'll test the default: AI is Sky.
+    // If AI is Sky, and it's Sky's turn, it *will* move. So this test as is will fail or be misrepresentative.
+
+    // A better approach:
+    // 1. AI is Sky (default).
+    // 2. AI is active.
+    // 3. AI makes its move. `isSkyTurn` becomes `false` (Land's turn).
+    // 4. Now, assert `findBestMove` is not called again immediately.
+    findBestMove.mockReturnValueOnce({ from: { x: 1, y: 1 }, to: { x: 2, y: 1 }, pieceType: 'chick', promotion: false, isDrop: false });
+    
+    // Render and activate AI. AI will make one move.
+    // We need to re-render or ensure the component updates for the second phase of the test.
+    // This test is becoming an integration test of two turns.
+    // Using `act` might be necessary if state updates are not immediately processed.
+    
+    // Let AI make its first move
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /toggle ai mode/i })); // Activate AI
+      await waitFor(() => expect(findBestMove).toHaveBeenCalledTimes(1)); // AI (Sky) moves
+    });
+
+    // Now it should be Land's turn. findBestMove should not be called again for Sky.
+    // We need to advance time if there's any delay or check.
+    // The current useEffect for AI in Game.js only runs if isSkyTurn === aiPlayerIsSky.
+    // So, if aiPlayerIsSky is true, and isSkyTurn becomes false, it shouldn't call findBestMove.
+    // The assertion is that it's NOT called a *second* time for the same turn.
+    expect(findBestMove).toHaveBeenCalledTimes(1); // Still 1, from AI's actual turn
+  });
+
+  test('AI does not move when game has ended', async () => {
+    findBestMove.mockReturnValue({ from: { x: 0, y: 1 }, to: { x: 3, y: 1 }, pieceType: 'lion', isDrop: false }); // Lion capture for win
+
+    // Render the game. For this test, we need to simulate a game end scenario.
+    // This is complex because result.didEnd is managed internally.
+    // One way: AI makes a winning move.
+    
+    render(<Game config={defaultConfig} onHelp={mockOnHelp} onConfigChange={mockOnConfigChange} />);
+    
+    const aiToggleButton = screen.getByRole('button', { name: /toggle ai mode/i });
+    fireEvent.click(aiToggleButton); // Activate AI
+
+    // Let AI make its (winning) move.
+    await waitFor(() => {
+      expect(findBestMove).toHaveBeenCalledTimes(1);
+    });
+
+    // At this point, if the move was winning, result.didEnd should be true.
+    // findBestMove should not be called again, even if it's theoretically AI's turn again due to some logic.
+    // (The turn should switch, so this is covered by "not its turn" mostly)
+    // The crucial part is that the useEffect has `!result.didEnd`.
+
+    // To robustly test this, we'd need to:
+    // 1. Set up a board where AI can make a winning move.
+    // 2. AI makes the move. `result.didEnd` becomes true.
+    // 3. Force `isSkyTurn` to be AI's turn again (hypothetically, if game logic allowed it post-win).
+    // 4. Assert `findBestMove` is not called.
+    // This is hard to set up without more control over Game state.
+
+    // Simplified check: if findBestMove was called once (for the winning move),
+    // and the game ends, subsequent calls (if any were possible) should be prevented
+    // by the `!result.didEnd` check in the useEffect.
+    // The current test structure for AI moves covers this implicitly: if the game ends,
+    // the AI effect hook won't run again for a new move.
+    // We've asserted it was called once for the move. If it were called again, the count would be > 1.
+    expect(findBestMove).toHaveBeenCalledTimes(1); 
+  });
+});

@@ -1,4 +1,4 @@
-import React, { useReducer, useState } from "react";
+import React, { useReducer, useState, useEffect } from "react";
 import cloneDeep from "lodash.clonedeep";
 import PropTypes from "prop-types";
 import Board from "../Board";
@@ -13,6 +13,7 @@ import {
 import getSettings from "./getSettings";
 import getAnimals, { getPromoted, getDemoted, isPromoted } from "./getAnimals";
 import getInitialPieces from "./getInitialPieces";
+import { findBestMove } from "../../shogiEngine.js"; // AI Engine
 import styles from "./Game.module.css";
 
 
@@ -390,8 +391,8 @@ const piecesReducer = (gameType) => (state, action) => {
   }
 };
 
-function Game({ config, onHelp, onConfigChange }) { 
-  const { gameType } = config; 
+function Game({ config, onHelp, onConfigChange }) {
+  const { gameType } = config;
   const initialState = {
     result: {
       didEnd: false,
@@ -411,9 +412,59 @@ function Game({ config, onHelp, onConfigChange }) {
     }
   );
   const [resultClosed, setResultClosed] = useState(false);
+  const [aiModeActive, setAiModeActive] = useState(false); // AI mode state
+  const [aiPlayerIsSky, setAiPlayerIsSky] = useState(true);   // AI plays as Sky by default
+
   const { numRows, numCols } = getSettings(gameType);
   const numRowsInSky = Math.floor(numRows / 3);
   const animals = getAnimals(gameType);
+
+  // AI Logic
+  useEffect(() => {
+    if (aiModeActive && isSkyTurn === aiPlayerIsSky && !result.didEnd) {
+      const timeoutId = setTimeout(() => {
+        console.log("AI is thinking...");
+        const bestMove = findBestMove(
+          pieces.board,
+          aiPlayerIsSky,
+          gameType,
+          pieces.captured
+        );
+
+        if (bestMove) {
+          console.log("AI Move:", bestMove);
+          if (bestMove.isDrop) {
+            const teamCaptured = aiPlayerIsSky ? pieces.captured.sky : pieces.captured.land;
+            const fromIndex = teamCaptured.findIndex(
+              (p) => p.type.toLowerCase() === bestMove.pieceType.toLowerCase() && p.number > 0
+            );
+            if (fromIndex !== -1) {
+              dispatch({
+                type: "drop",
+                payload: {
+                  isSky: aiPlayerIsSky,
+                  fromIndex: fromIndex,
+                  to: bestMove.to,
+                },
+              });
+            } else {
+              console.error("AI wants to drop a piece it doesn't have:", bestMove.pieceType);
+            }
+          } else {
+            dispatch({
+              type: "move",
+              payload: { from: bestMove.from, to: bestMove.to },
+            });
+          }
+        } else {
+          console.log("AI has no moves.");
+        }
+      }, 500); // 0.5 second delay for AI move
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isSkyTurn, aiModeActive, result.didEnd, pieces, gameType, aiPlayerIsSky, dispatch]);
+
 
   if (pieces.shouldPromote) {
     dispatch({ type: "promote", payload: { position: pieces.shouldPromote } });
@@ -423,10 +474,17 @@ function Game({ config, onHelp, onConfigChange }) {
   const reset = () => {
     dispatch({ type: "reset" });
     setResultClosed(false);
+    // setAiModeActive(false); // Optionally reset AI mode on game reset
   };
   const move = (from, to) => dispatch({ type: "move", payload: { from, to } });
   const drop = (isSky, from, to) =>
     dispatch({ type: "drop", payload: { isSky, fromIndex: from, to } });
+
+  const toggleAiMode = () => {
+    setAiModeActive(prevMode => !prevMode);
+    // Optional: Reset game or AI player assignment if needed when toggling
+    // For now, just toggling active state. AI will play as aiPlayerIsSky when its turn.
+  };
 
   const nextGameType = gameType === "micro" ? "goro" : "micro";
   const nextGameTypeLabel = nextGameType === "micro" ? "S" : "M";
@@ -460,6 +518,11 @@ function Game({ config, onHelp, onConfigChange }) {
               text={nextGameTypeLabel}
               ariaLabel={nextGameTypeAria}
               onClick={() => onConfigChange({ gameType: nextGameType })}
+            />
+            <IconButton
+              text={aiModeActive ? "A" : "P"}
+              ariaLabel="Toggle AI mode"
+              onClick={toggleAiMode}
             />
           </div>
           {!resultClosed && result.didEnd && (
